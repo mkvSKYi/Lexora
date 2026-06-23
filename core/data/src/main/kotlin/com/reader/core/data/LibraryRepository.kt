@@ -1,0 +1,36 @@
+package com.reader.core.data
+
+import com.reader.core.data.mapper.toDomain
+import com.reader.core.data.mapper.toEntity
+import com.reader.core.data.model.Book
+import com.reader.core.data.model.ReadingProgress
+import com.reader.core.database.dao.BookDao
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import javax.inject.Inject
+
+interface LibraryRepository {
+    fun observeBooks(): Flow<List<Book>>
+    suspend fun addBook(book: Book): Long
+    suspend fun getBook(id: Long): Book?
+    suspend fun markOpened(id: Long, now: Long)
+    suspend fun saveProgress(progress: ReadingProgress)
+    suspend fun getProgress(bookId: Long): ReadingProgress?
+    suspend fun deleteBook(id: Long)
+}
+
+class DefaultLibraryRepository @Inject constructor(
+    private val dao: BookDao,
+) : LibraryRepository {
+    override fun observeBooks(): Flow<List<Book>> =
+        dao.observeBooks().map { list -> list.map { it.toDomain() } }
+
+    override suspend fun addBook(book: Book): Long = dao.upsertBook(book.toEntity())
+    override suspend fun getBook(id: Long): Book? = dao.getBook(id)?.toDomain()
+    override suspend fun markOpened(id: Long, now: Long) = dao.updateLastOpened(id, now)
+    override suspend fun saveProgress(progress: ReadingProgress) =
+        dao.upsertProgress(progress.toEntity())
+    override suspend fun getProgress(bookId: Long): ReadingProgress? =
+        dao.getProgress(bookId)?.toDomain()
+    override suspend fun deleteBook(id: Long) = dao.deleteBook(id)
+}
