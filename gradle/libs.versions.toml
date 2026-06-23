@@ -28,6 +28,9 @@ coroutines = "1.10.2"
 # Readium
 readium = "3.1.2"
 
+# Core library desugaring (required by Readium 3.x Java 8+ APIs)
+desugarJdkLibs = "2.1.5"
+
 # Testing
 junit = "4.13.2"
 mockk = "1.14.2"
@@ -76,6 +79,9 @@ kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 readium-shared = { module = "org.readium.kotlin-toolkit:readium-shared", version.ref = "readium" }
 readium-streamer = { module = "org.readium.kotlin-toolkit:readium-streamer", version.ref = "readium" }
 readium-navigator = { module = "org.readium.kotlin-toolkit:readium-navigator", version.ref = "readium" }
+
+# Core library desugaring
+android-desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugarJdkLibs" }
 
 # Testing
 junit = { module = "junit:junit", version.ref = "junit" }

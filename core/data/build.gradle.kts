@@ -14,6 +14,7 @@ android {
     }
 
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
@@ -43,6 +44,9 @@ dependencies {
     // Readium (used by Task 4)
     implementation(libs.readium.shared)
     implementation(libs.readium.streamer)
+
+    // Core library desugaring (required by Readium 3.x)
+    coreLibraryDesugaring(libs.android.desugar.jdk.libs)
 
     // Test
     testImplementation(libs.junit)
