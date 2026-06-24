@@ -20,6 +20,9 @@ interface SavedWordDao {
     @Query("DELETE FROM saved_words WHERE id = :id")
     suspend fun deleteById(id: Long)
 
+    @Query("DELETE FROM saved_words WHERE bookId = :bookId")
+    suspend fun deleteByBookId(bookId: Long)
+
     @Query("SELECT EXISTS(SELECT 1 FROM saved_words WHERE term = :term AND bookId = :bookId)")
     suspend fun existsByTermAndBook(term: String, bookId: Long): Boolean
 }
