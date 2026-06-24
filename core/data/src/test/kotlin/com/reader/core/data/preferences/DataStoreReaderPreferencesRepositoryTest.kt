@@ -41,4 +41,16 @@ class DataStoreReaderPreferencesRepositoryTest {
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    @Test fun setting_brightness_null_clears_it() = runTest {
+        repo.setBrightness(0.5f)
+        repo.setWarmth(0.2f)
+        repo.setBrightness(null)
+        repo.observe().test {
+            val p = awaitItem()
+            assertNull(p.brightness)
+            assertEquals(0.2f, p.warmth)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
 }
