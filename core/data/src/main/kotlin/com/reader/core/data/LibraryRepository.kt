@@ -3,6 +3,7 @@ package com.reader.core.data
 import com.reader.core.data.mapper.toDomain
 import com.reader.core.data.mapper.toEntity
 import com.reader.core.data.model.Book
+import com.reader.core.data.model.BookWithProgress
 import com.reader.core.data.model.ReadingProgress
 import com.reader.core.database.dao.BookDao
 import kotlinx.coroutines.Dispatchers
@@ -14,6 +15,7 @@ import javax.inject.Inject
 
 interface LibraryRepository {
     fun observeBooks(): Flow<List<Book>>
+    fun observeBooksWithProgress(): Flow<List<BookWithProgress>>
     suspend fun addBook(book: Book): Long
     suspend fun getBook(id: Long): Book?
     suspend fun markOpened(id: Long, now: Long)
@@ -30,6 +32,9 @@ class DefaultLibraryRepository @Inject constructor(
 ) : LibraryRepository {
     override fun observeBooks(): Flow<List<Book>> =
         dao.observeBooks().map { list -> list.map { it.toDomain() } }
+
+    override fun observeBooksWithProgress(): Flow<List<BookWithProgress>> =
+        dao.observeBooksWithProgress().map { rows -> rows.map { it.toDomain() } }
 
     override suspend fun addBook(book: Book): Long = dao.upsertBook(book.toEntity())
     override suspend fun getBook(id: Long): Book? = dao.getBook(id)?.toDomain()

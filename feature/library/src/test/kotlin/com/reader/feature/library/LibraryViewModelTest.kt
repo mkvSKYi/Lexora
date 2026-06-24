@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import com.reader.core.data.LibraryRepository
 import com.reader.core.data.imports.EpubImporter
 import com.reader.core.data.model.Book
+import com.reader.core.data.model.BookWithProgress
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -33,8 +34,8 @@ class LibraryViewModelTest {
     @After fun teardown() = Dispatchers.resetMain()
 
     @Test fun emits_content_from_repository() = runTest {
-        every { repo.observeBooks() } returns flowOf(
-            listOf(Book(1, "Dune", "Herbert", null, "/d.epub", 1L, null)),
+        every { repo.observeBooksWithProgress() } returns flowOf(
+            listOf(BookWithProgress(Book(1, "Dune", "Herbert", null, "/d.epub", 1L, null), 0.0)),
         )
         val vm = LibraryViewModel(repo, importer)
         vm.uiState.test {
@@ -47,7 +48,7 @@ class LibraryViewModelTest {
     }
 
     @Test fun deleteBook_delegates_to_repository() = runTest {
-        every { repo.observeBooks() } returns flowOf(emptyList())
+        every { repo.observeBooksWithProgress() } returns flowOf(emptyList())
         val vm = LibraryViewModel(repo, importer)
         vm.deleteBook(book)
         advanceUntilIdle()
@@ -55,7 +56,7 @@ class LibraryViewModelTest {
     }
 
     @Test fun progressPercent_delegates_to_repository() = runTest {
-        every { repo.observeBooks() } returns flowOf(emptyList())
+        every { repo.observeBooksWithProgress() } returns flowOf(emptyList())
         coEvery { repo.progressPercent(7) } returns 0.33
         val vm = LibraryViewModel(repo, importer)
         assertEquals(0.33, vm.progressPercent(7), 0.0001)
