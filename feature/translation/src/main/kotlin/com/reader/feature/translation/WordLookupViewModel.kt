@@ -26,13 +26,27 @@ class WordLookupViewModel @Inject constructor(
         viewModelScope.launch {
             val entry = dictionary.lookup(w)
             if (entry != null) {
-                _lookupState.value = WordLookupState.Entry(
+                // Show the dictionary article immediately (local lookup is instant), then fetch the
+                // ML Kit translation alongside it so every word also has a Ukrainian translation.
+                val base = WordLookupState.Entry(
                     word = entry.headword,
                     ipa = entry.ipa,
                     partOfSpeech = entry.partOfSpeech,
                     definitions = entry.definitions.distinct(),
                     translations = entry.translations.distinct(),
+                    machineTranslation = null,
+                    translationPending = true,
                 )
+                _lookupState.value = base
+                val mt = if (engine.ensureModelsReady().isSuccess) {
+                    engine.translate(w).getOrNull()
+                } else {
+                    null
+                }
+                // Only update if this entry is still the one shown (user hasn't dismissed/retapped).
+                if (_lookupState.value === base) {
+                    _lookupState.value = base.copy(machineTranslation = mt, translationPending = false)
+                }
                 return@launch
             }
             val ready = engine.ensureModelsReady()

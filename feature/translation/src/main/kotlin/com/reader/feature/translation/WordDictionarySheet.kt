@@ -85,7 +85,9 @@ private fun EntryContent(
     state: WordLookupState.Entry,
     onSave: (term: String, translation: String) -> Unit,
 ) {
-    val saveValue = state.translations.firstOrNull() ?: state.definitions.firstOrNull()
+    val saveValue = state.machineTranslation
+        ?: state.translations.firstOrNull()
+        ?: state.definitions.firstOrNull()
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -118,8 +120,29 @@ private fun EntryContent(
             }
         }
 
+        // ML Kit translation, shown for every word alongside the dictionary article.
+        if (state.translationPending) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                Text(
+                    text = "Translating…",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        } else if (state.machineTranslation != null) {
+            Text(
+                text = state.machineTranslation,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+
         if (state.translations.isNotEmpty()) {
-            SectionLabel("Translations")
+            SectionLabel("Dictionary")
             Text(
                 text = state.translations.joinToString(", "),
                 style = MaterialTheme.typography.bodyLarge,

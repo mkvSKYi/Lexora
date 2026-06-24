@@ -9,6 +9,10 @@ sealed interface WordLookupState {
         val partOfSpeech: String?,
         val definitions: List<String>,
         val translations: List<String>,
+        /** ML Kit machine translation shown alongside the dictionary article; null if unavailable. */
+        val machineTranslation: String? = null,
+        /** True while the machine translation is still being fetched. */
+        val translationPending: Boolean = false,
     ) : WordLookupState
 
     data class Machine(
