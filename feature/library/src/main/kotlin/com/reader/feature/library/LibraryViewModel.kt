@@ -20,7 +20,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
-    repo: LibraryRepository,
+    private val repo: LibraryRepository,
     private val importer: EpubImporter,
 ) : ViewModel() {
 
@@ -45,4 +45,10 @@ class LibraryViewModel @Inject constructor(
             }
         }
     }
+
+    fun deleteBook(book: com.reader.core.data.model.Book) {
+        viewModelScope.launch { repo.deleteBookCompletely(book) }
+    }
+
+    suspend fun progressPercent(bookId: Long): Double = repo.progressPercent(bookId)
 }
