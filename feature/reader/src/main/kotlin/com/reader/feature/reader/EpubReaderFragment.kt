@@ -14,8 +14,10 @@ import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.StateFlow
 import org.json.JSONObject
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
+import org.readium.r2.navigator.epub.EpubPreferences
 import org.readium.r2.navigator.input.InputListener
 import org.readium.r2.navigator.input.KeyEvent
 import org.readium.r2.navigator.input.TapEvent
@@ -98,6 +100,13 @@ class EpubReaderFragment : Fragment(), EpubNavigatorFragment.Listener {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 navigator.currentLocator
                     .onEach { session.onLocatorChanged(it) }
+                    .launchIn(this)
+
+                // Apply persisted reading-appearance preferences to the live navigator on the
+                // initial Ready and re-apply on every change. submitPreferences is synchronous and
+                // main-thread only; collecting here (STARTED) satisfies both.
+                session.epubPreferences
+                    .onEach { navigator.submitPreferences(it) }
                     .launchIn(this)
             }
         }
@@ -307,10 +316,12 @@ private object NoOpActionModeCallback : android.view.ActionMode.Callback {
  * fragment cannot receive through its [Bundle] arguments. Sessions are short-lived and
  * cleared when the screen leaves the composition.
  */
+@OptIn(org.readium.r2.shared.ExperimentalReadiumApi::class)
 object ReaderNavigatorHost {
     class Session(
         val navigatorFactory: org.readium.r2.navigator.epub.EpubNavigatorFactory,
         val initialLocator: Locator?,
+        val epubPreferences: StateFlow<EpubPreferences>,
         val onLocatorChanged: (Locator) -> Unit,
         val onSelection: (SelectionEvent) -> Unit = {},
     )

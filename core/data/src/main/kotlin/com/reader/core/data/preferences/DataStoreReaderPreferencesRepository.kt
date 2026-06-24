@@ -13,10 +13,15 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
-class DataStoreReaderPreferencesRepository @Inject constructor(
-    @ApplicationContext context: Context,
-    storeName: String = DEFAULT_STORE_NAME,
+class DataStoreReaderPreferencesRepository(
+    context: Context,
+    storeName: String,
 ) : ReaderPreferencesRepository {
+
+    // Hilt cannot satisfy a defaulted String parameter, so the injectable constructor takes only
+    // the context and supplies the production store name; the two-arg constructor stays for tests.
+    @Inject
+    constructor(@ApplicationContext context: Context) : this(context, DEFAULT_STORE_NAME)
 
     private val dataStore: DataStore<Preferences> =
         PreferenceDataStoreFactory.create(

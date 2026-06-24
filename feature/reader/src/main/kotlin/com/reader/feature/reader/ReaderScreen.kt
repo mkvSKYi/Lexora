@@ -76,6 +76,7 @@ fun ReaderScreen(
                 is ReaderUiState.Ready -> EpubReader(
                     bookId = bookId,
                     state = state,
+                    epubPreferences = viewModel.epubPreferences,
                     onLocatorChanged = viewModel::onLocatorChanged,
                     onSelection = onSelection,
                 )
@@ -84,10 +85,12 @@ fun ReaderScreen(
     }
 }
 
+@OptIn(org.readium.r2.shared.ExperimentalReadiumApi::class)
 @Composable
 private fun EpubReader(
     bookId: Long,
     state: ReaderUiState.Ready,
+    epubPreferences: kotlinx.coroutines.flow.StateFlow<org.readium.r2.navigator.epub.EpubPreferences>,
     onLocatorChanged: (Long, org.readium.r2.shared.publication.Locator) -> Unit,
     onSelection: (SelectionEvent) -> Unit,
 ) {
@@ -117,6 +120,7 @@ private fun EpubReader(
             ReaderNavigatorHost.Session(
                 navigatorFactory = factory,
                 initialLocator = state.initialLocator,
+                epubPreferences = epubPreferences,
                 onLocatorChanged = { locator ->
                     // A page turn / new locator invalidates the anchored popover.
                     if (anchorRect != null) {

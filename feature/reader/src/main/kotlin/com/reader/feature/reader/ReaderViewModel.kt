@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.reader.core.data.LibraryRepository
 import com.reader.core.data.model.ReadingProgress
+import com.reader.core.data.preferences.ReaderPreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -12,17 +13,55 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import org.readium.r2.navigator.epub.EpubPreferences
+import org.readium.r2.navigator.epub.EpubPreferencesSerializer
+import org.readium.r2.shared.ExperimentalReadiumApi
 import org.readium.r2.shared.publication.Locator
 import javax.inject.Inject
 
+@OptIn(ExperimentalReadiumApi::class)
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
     private val repository: LibraryRepository,
     private val publicationOpener: PublicationOpener,
+    private val preferencesRepository: ReaderPreferencesRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ReaderUiState>(ReaderUiState.Loading)
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
+
+    private val preferencesSerializer = EpubPreferencesSerializer()
+
+    private val _epubPreferences = MutableStateFlow(EpubPreferences())
+
+    /**
+     * The current Readium reading-appearance preferences, loaded from persistence and updated
+     * via [updateEpubPreferences]. Always emits a valid value; a malformed persisted JSON
+     * falls back to defaults rather than crashing.
+     */
+    val epubPreferences: StateFlow<EpubPreferences> = _epubPreferences.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            preferencesRepository.observe().collect { prefs ->
+                _epubPreferences.value = deserialize(prefs.epubPreferencesJson)
+            }
+        }
+    }
+
+    /** Updates the live preferences and persists them as Readium-serialized JSON. */
+    fun updateEpubPreferences(prefs: EpubPreferences) {
+        _epubPreferences.value = prefs
+        viewModelScope.launch {
+            preferencesRepository.setEpubPreferencesJson(preferencesSerializer.serialize(prefs))
+        }
+    }
+
+    private fun deserialize(json: String?): EpubPreferences {
+        if (json == null) return EpubPreferences()
+        return runCatching { preferencesSerializer.deserialize(json) }
+            .getOrDefault(EpubPreferences())
+    }
 
     private var saveJob: Job? = null
 
