@@ -31,6 +31,7 @@ import androidx.fragment.compose.AndroidFragment
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.reader.feature.reader.chrome.ReaderChrome
+import com.reader.feature.reader.navigation.ReaderBottomBar
 import com.reader.feature.reader.navigation.ReaderTocSheet
 import com.reader.feature.reader.settings.ReaderSettingsSheet
 import com.reader.feature.translation.TranslationPopover
@@ -69,6 +70,8 @@ fun ReaderScreen(
 
     val toc by viewModel.toc.collectAsStateWithLifecycle()
     val currentChapterHref by viewModel.currentChapterHref.collectAsStateWithLifecycle()
+    val currentProgression by viewModel.currentProgression.collectAsStateWithLifecycle()
+    val currentChapterTitle by viewModel.currentChapterTitle.collectAsStateWithLifecycle()
 
     val epubPreferences by viewModel.epubPreferences.collectAsStateWithLifecycle()
     val brightness by viewModel.brightness.collectAsStateWithLifecycle()
@@ -134,7 +137,13 @@ fun ReaderScreen(
         onToc = { tocVisible = true },
         onAa = { settingsVisible = true },
         onRevealStripTap = { chromeVisible = !chromeVisible },
-        bottomBar = {},
+        bottomBar = {
+            ReaderBottomBar(
+                progression = currentProgression,
+                chapterTitle = currentChapterTitle,
+                onSeek = viewModel::seekTo,
+            )
+        },
     ) {
         Box(
             modifier = Modifier.fillMaxSize(),
