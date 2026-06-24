@@ -26,20 +26,47 @@ class WordLookupViewModelTest {
     @Before fun setup() = Dispatchers.setMain(StandardTestDispatcher())
     @After fun teardown() = Dispatchers.resetMain()
 
-    @Test fun dictionary_hit_emits_entry_deduped() = runTest {
+    @Test fun dictionary_hit_emits_entry_then_machine_translation_alongside() = runTest {
         coEvery { dictionary.lookup("dog") } returns DictionaryEntry(
             "dog", "/dɒɡ/", "noun", listOf("An animal.", "An animal."), listOf("собака", "собака", "пес"),
         )
+        coEvery { engine.ensureModelsReady() } returns Result.success(Unit)
+        coEvery { engine.translate("dog") } returns Result.success("собака (авто)")
         val vm = WordLookupViewModel(dictionary, engine)
         vm.lookupState.test {
             assertNull(awaitItem())
             vm.onWord("dog")
             assertEquals(WordLookupState.Loading, awaitItem())
-            val e = awaitItem()
-            assertTrue(e is WordLookupState.Entry)
-            e as WordLookupState.Entry
-            assertEquals(listOf("An animal."), e.definitions)        // deduped
-            assertEquals(listOf("собака", "пес"), e.translations)    // deduped, order kept
+            // First the dictionary entry shows immediately, with the auto translation pending.
+            val pending = awaitItem() as WordLookupState.Entry
+            assertEquals(listOf("An animal."), pending.definitions)        // deduped
+            assertEquals(listOf("собака", "пес"), pending.translations)    // deduped, order kept
+            assertTrue(pending.translationPending)
+            assertNull(pending.machineTranslation)
+            // Then the ML Kit translation arrives alongside the same entry.
+            val resolved = awaitItem() as WordLookupState.Entry
+            assertEquals("собака (авто)", resolved.machineTranslation)
+            assertEquals(false, resolved.translationPending)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test fun dictionary_hit_with_failed_translation_still_shows_entry() = runTest {
+        coEvery { dictionary.lookup("dog") } returns DictionaryEntry(
+            "dog", null, null, listOf("An animal."), emptyList(),
+        )
+        coEvery { engine.ensureModelsReady() } returns Result.success(Unit)
+        coEvery { engine.translate("dog") } returns Result.failure(RuntimeException("offline"))
+        val vm = WordLookupViewModel(dictionary, engine)
+        vm.lookupState.test {
+            assertNull(awaitItem())
+            vm.onWord("dog")
+            assertEquals(WordLookupState.Loading, awaitItem())
+            awaitItem() // pending entry
+            val resolved = awaitItem() as WordLookupState.Entry
+            assertNull(resolved.machineTranslation)                       // MT failed → just omitted
+            assertEquals(false, resolved.translationPending)
+            assertEquals(listOf("An animal."), resolved.definitions)      // entry still shown
             cancelAndIgnoreRemainingEvents()
         }
     }
