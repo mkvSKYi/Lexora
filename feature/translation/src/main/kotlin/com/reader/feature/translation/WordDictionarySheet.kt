@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,6 +33,9 @@ private val LOADING_MIN_HEIGHT = 160.dp
 
 /** Vertical spacing between sections of the entry layout. */
 private val SECTION_SPACING = 12.dp
+
+/** Max number of definitions shown, so a word with dozens of senses doesn't bury the Save button. */
+private const val MAX_DEFINITIONS = 10
 
 /**
  * Modal bottom sheet that renders a [WordLookupState] for a tapped word.
@@ -91,6 +96,7 @@ private fun EntryContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = SHEET_HORIZONTAL_PADDING, vertical = SHEET_VERTICAL_PADDING),
         verticalArrangement = Arrangement.spacedBy(SECTION_SPACING),
     ) {
@@ -153,11 +159,19 @@ private fun EntryContent(
         if (state.definitions.isNotEmpty()) {
             SectionLabel("Definitions")
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                state.definitions.forEachIndexed { index, definition ->
+                state.definitions.take(MAX_DEFINITIONS).forEachIndexed { index, definition ->
                     Text(
                         text = "${index + 1}. $definition",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+                val hidden = state.definitions.size - MAX_DEFINITIONS
+                if (hidden > 0) {
+                    Text(
+                        text = "+$hidden more",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
