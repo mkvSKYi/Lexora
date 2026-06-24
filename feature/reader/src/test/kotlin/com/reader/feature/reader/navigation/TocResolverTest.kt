@@ -52,6 +52,29 @@ class TocResolverTest {
         assertNull(TocResolver.currentEntryIndex(emptyList(), "ch1.html"))
     }
 
+    @Test fun reading_order_aware_no_exact_match_picks_closest_preceding_in_spine() {
+        // TOC only labels ch1 and ch3, but the spine has an unlabeled ch2 between them. While on
+        // ch2 (no TOC entry of its own), the current chapter is ch1 — the closest preceding entry
+        // in reading order — NOT ch3 (which is last by list position).
+        val entries = listOf(
+            TocEntry("Ch1", "ch1.html", 0, null),
+            TocEntry("Ch3", "ch3.html", 0, null),
+        )
+        val spine = listOf("ch1.html", "ch2.html", "ch3.html")
+        assertEquals(0, TocResolver.currentEntryIndex(entries, spine, "ch2.html"))
+        // Sanity: while actually on ch3, exact match wins.
+        assertEquals(1, TocResolver.currentEntryIndex(entries, spine, "ch3.html#frag"))
+    }
+
+    @Test fun reading_order_aware_falls_back_when_resource_not_in_spine() {
+        val entries = listOf(
+            TocEntry("Ch1", "ch1.html", 0, null),
+            TocEntry("Ch2", "ch2.html", 0, null),
+        )
+        // unknown.html is not in the spine: fall back to the list-order heuristic (last entry).
+        assertEquals(1, TocResolver.currentEntryIndex(entries, listOf("ch1.html"), "unknown.html"))
+    }
+
     @Test fun fraction_maps_to_closest_position_and_empty_is_null() {
         assertNull(TocResolver.positionForFraction(emptyList(), 0.5f))
     }

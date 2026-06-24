@@ -129,6 +129,7 @@ fun ReaderScreen(
                     bookId = bookId,
                     state = state,
                     epubPreferences = viewModel.epubPreferences,
+                    navigateRequests = viewModel.navigateRequests,
                     onLocatorChanged = viewModel::onLocatorChanged,
                     onSelection = onSelection,
                 )
@@ -163,6 +164,7 @@ private fun EpubReader(
     bookId: Long,
     state: ReaderUiState.Ready,
     epubPreferences: kotlinx.coroutines.flow.StateFlow<org.readium.r2.navigator.epub.EpubPreferences>,
+    navigateRequests: kotlinx.coroutines.flow.SharedFlow<org.readium.r2.shared.publication.Locator>,
     onLocatorChanged: (Long, org.readium.r2.shared.publication.Locator) -> Unit,
     onSelection: (SelectionEvent) -> Unit,
 ) {
@@ -208,6 +210,14 @@ private fun EpubReader(
 
     DisposableEffect(sessionId) {
         onDispose { ReaderNavigatorHost.unregister(sessionId) }
+    }
+
+    // Route navigate requests (chapter jump / fraction seek) from the ViewModel through the
+    // session's goTo hook, which the fragment fulfils against the live navigator.
+    LaunchedEffect(sessionId, navigateRequests) {
+        navigateRequests.collect { locator ->
+            ReaderNavigatorHost.get(sessionId)?.goTo?.invoke(locator)
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {

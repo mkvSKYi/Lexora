@@ -33,6 +33,9 @@ object TocResolver {
      * path, fragment stripped). Prefers an exact href match; otherwise falls back to the last
      * entry that appears at or before the current href in [entries] order. Returns null when
      * [entries] is empty or nothing matches.
+     *
+     * This list-order fallback is a loose heuristic; prefer the reading-order-aware
+     * [currentEntryIndex] overload when the publication's reading order is available.
      */
     fun currentEntryIndex(entries: List<TocEntry>, currentHref: String): Int? {
         if (entries.isEmpty()) return null
@@ -46,6 +49,47 @@ object TocResolver {
         // preceding chapter.
         val prefix = entries.indexOfLast { target.startsWith(it.href) }
         return if (prefix >= 0) prefix else entries.lastIndex
+    }
+
+    /**
+     * Reading-order-aware current-chapter detection. [readingOrderHrefs] is the spine, in reading
+     * order (fragment-stripped hrefs). Prefers an exact TOC match for [currentHref]; when the
+     * current resource has no TOC entry of its own (common: a spine item with no chapter heading),
+     * picks the TOC entry whose resource is the closest one AT OR BEFORE the current resource in
+     * reading order — not merely the last entry by list position. Falls back to the loose
+     * list-order heuristic when reading-order data can't resolve the current resource. Returns null
+     * when [entries] is empty.
+     */
+    fun currentEntryIndex(
+        entries: List<TocEntry>,
+        readingOrderHrefs: List<String>,
+        currentHref: String,
+    ): Int? {
+        if (entries.isEmpty()) return null
+        val target = currentHref.stripFragment()
+
+        val exact = entries.indexOfLast { it.href == target }
+        if (exact >= 0) return exact
+
+        val currentSpine = readingOrderHrefs.indexOf(target)
+        if (currentSpine < 0) {
+            // Current resource isn't in the reading order we were given; fall back to list-order.
+            return currentEntryIndex(entries, currentHref)
+        }
+
+        // Among entries whose resource is at or before the current resource in reading order, pick
+        // the one with the greatest spine index (closest preceding chapter); break ties by the
+        // later list position (deepest/last sub-entry of that resource).
+        var bestIndex = -1
+        var bestSpine = -1
+        entries.forEachIndexed { index, entry ->
+            val spine = readingOrderHrefs.indexOf(entry.href)
+            if (spine in 0..currentSpine && spine >= bestSpine) {
+                bestSpine = spine
+                bestIndex = index
+            }
+        }
+        return if (bestIndex >= 0) bestIndex else currentEntryIndex(entries, currentHref)
     }
 
     /**

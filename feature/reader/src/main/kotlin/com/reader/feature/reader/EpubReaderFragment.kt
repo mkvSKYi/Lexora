@@ -96,6 +96,14 @@ class EpubReaderFragment : Fragment(), EpubNavigatorFragment.Listener {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val session = session ?: return
+
+        // Fulfil the navigate hook now the navigator is live: hop to the main thread (go() is
+        // main-thread only) via the view lifecycle scope so requests after onDestroyView are
+        // dropped rather than touching a torn-down navigator.
+        session.goTo = { locator ->
+            viewLifecycleOwner.lifecycleScope.launch { navigator.go(locator, animated = false) }
+        }
+
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 navigator.currentLocator
@@ -139,6 +147,8 @@ class EpubReaderFragment : Fragment(), EpubNavigatorFragment.Listener {
                 pageFragmentCallbacks,
             )
         }
+        // Detach the navigate hook so a stale lambda can't drive a torn-down navigator.
+        session?.goTo = {}
         super.onDestroyView()
     }
 
@@ -324,7 +334,15 @@ object ReaderNavigatorHost {
         val epubPreferences: StateFlow<EpubPreferences>,
         val onLocatorChanged: (Locator) -> Unit,
         val onSelection: (SelectionEvent) -> Unit = {},
-    )
+    ) {
+        /**
+         * Set by [EpubReaderFragment] once its navigator is live. The screen invokes this to jump
+         * the navigator to a locator (chapter pick / fraction seek). No-op before the navigator is
+         * ready (defaulting to a do-nothing lambda).
+         */
+        @Volatile
+        var goTo: (Locator) -> Unit = {}
+    }
 
     private val sessions = ConcurrentHashMap<Long, Session>()
     private val nextId = AtomicLong(0L)
