@@ -41,12 +41,36 @@ class ReaderViewModel @Inject constructor(
      */
     val epubPreferences: StateFlow<EpubPreferences> = _epubPreferences.asStateFlow()
 
+    private val _brightness = MutableStateFlow<Float?>(null)
+
+    /** Screen brightness override in 0f..1f, or null to follow the system. */
+    val brightness: StateFlow<Float?> = _brightness.asStateFlow()
+
+    private val _warmth = MutableStateFlow(0f)
+
+    /** Warmth (amber overlay) intensity in 0f..1f; 0 = off. */
+    val warmth: StateFlow<Float> = _warmth.asStateFlow()
+
     init {
         viewModelScope.launch {
             preferencesRepository.observe().collect { prefs ->
                 _epubPreferences.value = deserialize(prefs.epubPreferencesJson)
+                _brightness.value = prefs.brightness
+                _warmth.value = prefs.warmth
             }
         }
+    }
+
+    /** Updates the live brightness override and persists it. Null follows the system. */
+    fun setBrightness(value: Float?) {
+        _brightness.value = value
+        viewModelScope.launch { preferencesRepository.setBrightness(value) }
+    }
+
+    /** Updates the live warmth intensity and persists it. */
+    fun setWarmth(value: Float) {
+        _warmth.value = value
+        viewModelScope.launch { preferencesRepository.setWarmth(value) }
     }
 
     /** Updates the live preferences and persists them as Readium-serialized JSON. */

@@ -3,6 +3,8 @@ package com.reader.feature.reader.settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,6 +21,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedIconButton
@@ -57,6 +60,9 @@ private const val PAGE_MARGINS_MAX = 2.0f
 private const val PAGE_MARGINS_DEFAULT = 1.0f
 private const val PAGE_MARGINS_STEPS = 5 // 0.25 increments across the range
 
+/** Slider position used when no brightness override is set yet (mid-scale). */
+private const val BRIGHTNESS_DEFAULT = 0.5f
+
 private val SWATCH_SIZE = 44.dp
 
 /** A theme preset paired with the swatch colors that preview it. */
@@ -87,6 +93,10 @@ private val THEME_SWATCHES = listOf(
 fun ReaderSettingsSheet(
     prefs: EpubPreferences,
     onPrefsChange: (EpubPreferences) -> Unit,
+    brightness: Float?,
+    warmth: Float,
+    onBrightnessChange: (Float?) -> Unit,
+    onWarmthChange: (Float) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -98,6 +108,7 @@ fun ReaderSettingsSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
@@ -108,8 +119,45 @@ fun ReaderSettingsSheet(
             LineHeightRow(prefs = prefs, onPrefsChange = onPrefsChange)
             PageMarginsRow(prefs = prefs, onPrefsChange = onPrefsChange)
             PageModeRow(prefs = prefs, onPrefsChange = onPrefsChange)
+            BrightnessRow(brightness = brightness, onBrightnessChange = onBrightnessChange)
+            WarmthRow(warmth = warmth, onWarmthChange = onWarmthChange)
         }
     }
+}
+
+/** Brightness override slider (0..1) with a "System" reset that follows device brightness. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BrightnessRow(brightness: Float?, onBrightnessChange: (Float?) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        SectionLabel("Brightness")
+        TextButton(
+            onClick = { onBrightnessChange(null) },
+            enabled = brightness != null,
+        ) {
+            Text("System")
+        }
+    }
+    Slider(
+        value = brightness ?: BRIGHTNESS_DEFAULT,
+        onValueChange = { onBrightnessChange(it) },
+        valueRange = 0f..1f,
+    )
+}
+
+/** Warmth (amber overlay) slider (0..1); 0 = off. */
+@Composable
+private fun WarmthRow(warmth: Float, onWarmthChange: (Float) -> Unit) {
+    SectionLabel("Warmth")
+    Slider(
+        value = warmth.coerceIn(0f, 1f),
+        onValueChange = { onWarmthChange(it) },
+        valueRange = 0f..1f,
+    )
 }
 
 @OptIn(ExperimentalReadiumApi::class)
