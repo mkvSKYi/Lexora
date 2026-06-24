@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.reader.feature.reader"
+    namespace = "com.reader.feature.translation"
     compileSdk = 36
 
     defaultConfig {
@@ -17,8 +17,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
-        // Readium 3.x compiles against Java 8+ APIs unavailable at minSdk 26.
-        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlin {
@@ -31,59 +29,34 @@ android {
 
     sourceSets["main"].kotlin.srcDir("src/main/kotlin")
     sourceSets["test"].kotlin.srcDir("src/test/kotlin")
-
-    // Readium's Locator/Url touch android.net.Uri & org.json at runtime → Robolectric.
-    testOptions {
-        unitTests.isIncludeAndroidResources = true
-    }
 }
 
 dependencies {
-    // Core modules
-    implementation(project(":core:data"))
-    implementation(project(":core:designsystem"))
-
-    // Feature modules
-    // Declared now; the translation popover is wired into the reader in Task 6.
-    implementation(project(":feature:translation"))
-
-    // Readium
-    implementation(libs.readium.shared)
-    implementation(libs.readium.streamer)
-    implementation(libs.readium.navigator)
-
-    // Core library desugaring
-    coreLibraryDesugaring(libs.android.desugar.jdk.libs)
-
-    // Compose
+    // Compose (for the translation popover, added in Task 4)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.compose.material.icons.extended)
     debugImplementation(libs.androidx.compose.ui.tooling)
-
-    // Fragment-Compose interop (host EpubNavigatorFragment)
-    implementation(libs.androidx.fragment.compose)
 
     // Lifecycle / ViewModel
     implementation(libs.androidx.lifecycle.viewmodel.compose)
-    implementation(libs.androidx.lifecycle.runtime.compose)
 
     // Hilt
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
-    implementation(libs.androidx.hilt.navigation.compose)
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.coroutines.play.services)
+
+    // ML Kit (offline EN->UK translation, impl added in Task 2)
+    implementation(libs.mlkit.translate)
 
     // Test
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.turbine)
     testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation(libs.robolectric)
-    testImplementation(libs.androidx.test.core)
 }

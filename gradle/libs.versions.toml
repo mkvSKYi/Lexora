@@ -28,6 +28,9 @@ datastore = "1.1.7"
 # Coroutines
 coroutines = "1.10.2"
 
+# ML Kit (on-device translation)
+mlkitTranslate = "17.0.3"
+
 # Coil (image loading for Compose)
 coil = "3.3.0"
 
@@ -85,9 +88,13 @@ androidx-datastore-preferences = { module = "androidx.datastore:datastore-prefer
 # Coroutines
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlinx-coroutines-play-services = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-play-services", version.ref = "coroutines" }
 
 # Coil (image loading for Compose)
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+
+# ML Kit (on-device translation)
+mlkit-translate = { module = "com.google.mlkit:translate", version.ref = "mlkitTranslate" }
 
 # Readium
 readium-shared = { module = "org.readium.kotlin-toolkit:readium-shared", version.ref = "readium" }
