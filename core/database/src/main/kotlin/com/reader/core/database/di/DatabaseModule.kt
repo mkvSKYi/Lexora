@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.reader.core.database.ReaderDatabase
 import com.reader.core.database.dao.BookDao
+import com.reader.core.database.dao.SavedWordDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -23,8 +24,11 @@ object DatabaseModule {
             context,
             ReaderDatabase::class.java,
             "reader.db",
-        ).build()
+        ).addMigrations(ReaderDatabase.MIGRATION_1_2).build()
 
     @Provides
     fun provideBookDao(database: ReaderDatabase): BookDao = database.bookDao()
+
+    @Provides
+    fun provideSavedWordDao(database: ReaderDatabase): SavedWordDao = database.savedWordDao()
 }
