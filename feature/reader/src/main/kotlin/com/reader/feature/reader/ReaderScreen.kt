@@ -17,6 +17,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.fragment.compose.AndroidFragment
@@ -30,6 +31,7 @@ fun ReaderScreen(
     bookId: Long,
     onBack: () -> Unit,
     viewModel: ReaderViewModel = hiltViewModel(),
+    onSelection: (SelectionEvent) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -65,6 +67,7 @@ fun ReaderScreen(
                     bookId = bookId,
                     state = state,
                     onLocatorChanged = viewModel::onLocatorChanged,
+                    onSelection = onSelection,
                 )
             }
         }
@@ -76,7 +79,11 @@ private fun EpubReader(
     bookId: Long,
     state: ReaderUiState.Ready,
     onLocatorChanged: (Long, org.readium.r2.shared.publication.Locator) -> Unit,
+    onSelection: (SelectionEvent) -> Unit,
 ) {
+    // Keep the latest onSelection without re-registering the session on each recomposition.
+    val currentOnSelection by rememberUpdatedState(onSelection)
+
     // Register the navigator hand-off session for the lifetime of this composition.
     val sessionId = remember(state.publication) {
         val factory = EpubNavigatorFactory(
@@ -88,6 +95,7 @@ private fun EpubReader(
                 navigatorFactory = factory,
                 initialLocator = state.initialLocator,
                 onLocatorChanged = { locator -> onLocatorChanged(bookId, locator) },
+                onSelection = { event -> currentOnSelection(event) },
             ),
         )
     }

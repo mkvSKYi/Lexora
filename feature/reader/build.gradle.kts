@@ -43,6 +43,10 @@ dependencies {
     implementation(project(":core:data"))
     implementation(project(":core:designsystem"))
 
+    // Feature modules
+    // Declared now; the translation popover is wired into the reader in Task 6.
+    implementation(project(":feature:translation"))
+
     // Readium
     implementation(libs.readium.shared)
     implementation(libs.readium.streamer)
