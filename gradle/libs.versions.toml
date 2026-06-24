@@ -25,6 +25,9 @@ datastore = "1.1.7"
 # Coroutines
 coroutines = "1.10.2"
 
+# Coil (image loading for Compose)
+coil = "3.3.0"
+
 # Readium
 readium = "3.1.2"
 
@@ -56,6 +59,7 @@ androidx-compose-ui-graphics = { module = "androidx.compose.ui:ui-graphics" }
 androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
 androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
+androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
 
 # Hilt
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
@@ -74,6 +78,9 @@ androidx-datastore-preferences = { module = "androidx.datastore:datastore-prefer
 # Coroutines
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+
+# Coil (image loading for Compose)
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 
 # Readium
 readium-shared = { module = "org.readium.kotlin-toolkit:readium-shared", version.ref = "readium" }
