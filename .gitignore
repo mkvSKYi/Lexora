@@ -21,3 +21,6 @@ TMP_*.md
 # Keys / secrets
 secrets.properties
 *.jks
+
+# Claude personal/machine-specific permissions
+.claude/settings.local.json
