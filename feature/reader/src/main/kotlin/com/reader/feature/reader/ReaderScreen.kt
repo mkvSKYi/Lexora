@@ -6,8 +6,11 @@ import android.content.ContextWrapper
 import android.graphics.RectF
 import android.view.WindowManager
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -24,12 +27,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupPositionProvider
 import androidx.fragment.compose.AndroidFragment
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -272,7 +276,7 @@ private fun EpubReader(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         AndroidFragment<EpubReaderFragment>(
             modifier = Modifier.fillMaxSize(),
             arguments = EpubReaderFragment.argsFor(sessionId),
@@ -281,69 +285,61 @@ private fun EpubReader(
         val currentPopup = popup
         val rect = anchorRect
         if (currentPopup != null && rect != null) {
-            val density = LocalDensity.current
-            // rectInView is in navigator-view pixels, which align with the pixel space the
-            // Popup positions against (parent bounds + window-relative). Anchor the popover
-            // just below the word, horizontally centered, then clamp on-screen.
-            val positionProvider = remember(rect, density) {
-                WordAnchorPositionProvider(
-                    anchorPx = rect,
-                    gapPx = with(density) { GAP_DP.dp.toPx() },
-                )
-            }
-            Popup(
-                popupPositionProvider = positionProvider,
-                onDismissRequest = {
-                    anchorRect = null
-                    translationVm.dismiss()
-                },
-            ) {
-                TranslationPopover(
-                    state = currentPopup,
-                    onDismiss = {
-                        anchorRect = null
-                        translationVm.dismiss()
-                    },
-                    onSave = {
-                        val result = currentPopup as? com.reader.feature.translation.TranslationPopupState.Result
-                        if (result != null) {
-                            onSaveWord(result.source, result.translation, lastContextSentence)
+            val gapPx = with(LocalDensity.current) { GAP_DP.dp.toPx() }
+            val maxW = constraints.maxWidth
+            val maxH = constraints.maxHeight
+
+            var cardSize by remember { mutableStateOf(IntSize.Zero) }
+            // Full-screen scrim (PARENT) catches taps outside the card and dismisses it, consuming
+            // the tap so it doesn't pass through to translate the word under it. The card is its
+            // CHILD, so taps on the card (and its Save button) are hit-tested first and never reach
+            // the scrim. Tapping again — card gone — reaches the navigator and translates.
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(currentPopup) {
+                        detectTapGestures {
                             anchorRect = null
                             translationVm.dismiss()
                         }
                     },
-                )
+            ) {
+                Box(
+                    modifier = Modifier
+                        .onSizeChanged { cardSize = it }
+                        .offset {
+                            val centerX = ((rect.left + rect.right) / 2f).toInt()
+                            val x = (centerX - cardSize.width / 2)
+                                .coerceIn(0, (maxW - cardSize.width).coerceAtLeast(0))
+                            val below = (rect.bottom + gapPx).toInt()
+                            val above = (rect.top - gapPx).toInt() - cardSize.height
+                            val y = (if (below + cardSize.height <= maxH) below else above)
+                                .coerceIn(0, (maxH - cardSize.height).coerceAtLeast(0))
+                            IntOffset(x, y)
+                        }
+                        // Consume taps on the card area so they don't reach the scrim and dismiss;
+                        // the Save button (deeper child) still gets its taps first.
+                        .pointerInput(currentPopup) { detectTapGestures { } },
+                ) {
+                    TranslationPopover(
+                        state = currentPopup,
+                        onDismiss = {
+                            anchorRect = null
+                            translationVm.dismiss()
+                        },
+                        onSave = {
+                            val result = currentPopup as? com.reader.feature.translation.TranslationPopupState.Result
+                            if (result != null) {
+                                onSaveWord(result.source, result.translation, lastContextSentence)
+                                anchorRect = null
+                                translationVm.dismiss()
+                            }
+                        },
+                    )
+                }
             }
         }
     }
 }
 
 private const val GAP_DP = 8
-
-/**
- * Positions the translation popover just below the tapped word (in navigator-view pixels),
- * horizontally centered on it, falling back to above the word when there is no room below.
- * The result is clamped to the window so the popover never spills off-screen.
- */
-private class WordAnchorPositionProvider(
-    private val anchorPx: RectF,
-    private val gapPx: Float,
-) : PopupPositionProvider {
-    override fun calculatePosition(
-        anchorBounds: androidx.compose.ui.unit.IntRect,
-        windowSize: androidx.compose.ui.unit.IntSize,
-        layoutDirection: androidx.compose.ui.unit.LayoutDirection,
-        popupContentSize: androidx.compose.ui.unit.IntSize,
-    ): IntOffset {
-        val anchorCenterX = ((anchorPx.left + anchorPx.right) / 2f).toInt()
-        var x = anchorCenterX - popupContentSize.width / 2
-        x = x.coerceIn(0, (windowSize.width - popupContentSize.width).coerceAtLeast(0))
-
-        val below = (anchorPx.bottom + gapPx).toInt()
-        val above = (anchorPx.top - gapPx).toInt() - popupContentSize.height
-        var y = if (below + popupContentSize.height <= windowSize.height) below else above
-        y = y.coerceIn(0, (windowSize.height - popupContentSize.height).coerceAtLeast(0))
-
-        return IntOffset(x, y)
-    }
-}
