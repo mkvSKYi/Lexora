@@ -11,8 +11,11 @@ package com.reader.feature.reader
  *    `devicePixelRatio`), so the Kotlin side gets a rect already in the navigator view's space.
  *
  * The word is expanded from the caret using [Intl.Segmenter] when available (grapheme/locale
- * aware), falling back to a whitespace/punctuation scan. Returns the JSON string
- * `{"word","left","top","right","bottom"}`, or `null` when no word is under the point.
+ * aware), falling back to a whitespace/punctuation scan. It also computes a best-effort
+ * enclosing `sentence` by expanding from the caret to sentence terminators `.!?…` within the
+ * tapped text node (same boundary scan as [SentenceResolver], simplified to a single node).
+ * Returns the JSON string `{"word","sentence","left","top","right","bottom"}`, or `null` when no
+ * word is under the point. `sentence` may be null when none can be resolved.
  */
 internal object WordResolver {
 
@@ -97,8 +100,43 @@ internal object WordResolver {
               return null;
             }
 
+            // Best-effort enclosing sentence: expand from the caret to sentence terminators
+            // within this text node. Spanning inline elements isn't attempted here (kept simple);
+            // a null/partial sentence must never block the word translation.
+            var sentence = null;
+            try {
+              var terminators = '.!?…';
+              function isTerminator(ch) { return terminators.indexOf(ch) !== -1; }
+              function isClosing(ch) { return /["'’”»)\]}]/.test(ch); }
+              var sStart = 0;
+              for (var p = offset - 1; p > 0; p--) {
+                if (isTerminator(text.charAt(p))) {
+                  var q = p + 1;
+                  while (q < text.length && isClosing(text.charAt(q))) q++;
+                  while (q < text.length && /\s/.test(text.charAt(q))) q++;
+                  if (q <= offset) { sStart = q; break; }
+                }
+              }
+              var sEnd = text.length;
+              for (var r = Math.max(offset, end); r < text.length; r++) {
+                if (isTerminator(text.charAt(r))) {
+                  var e = r + 1;
+                  while (e < text.length && isClosing(text.charAt(e))) e++;
+                  sEnd = e;
+                  break;
+                }
+              }
+              if (sEnd > sStart) {
+                var s = text.substring(sStart, sEnd).replace(/\s+/g, ' ').trim();
+                if (s) sentence = s;
+              }
+            } catch (sErr) {
+              sentence = null;
+            }
+
             return JSON.stringify({
               word: word,
+              sentence: sentence,
               left: rect.left * dpr,
               top: rect.top * dpr,
               right: rect.right * dpr,

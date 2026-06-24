@@ -3,7 +3,9 @@ package com.reader.feature.reader
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.reader.core.data.LibraryRepository
+import com.reader.core.data.SavedWordsRepository
 import com.reader.core.data.model.ReadingProgress
+import com.reader.core.data.model.SavedWord
 import com.reader.core.data.preferences.ReaderPreferencesRepository
 import com.reader.feature.reader.navigation.TocEntry
 import com.reader.feature.reader.navigation.TocResolver
@@ -33,7 +35,16 @@ class ReaderViewModel @Inject constructor(
     private val repository: LibraryRepository,
     private val publicationOpener: PublicationOpener,
     private val preferencesRepository: ReaderPreferencesRepository,
+    private val savedWordsRepository: SavedWordsRepository,
 ) : ViewModel() {
+
+    /** The id of the currently loaded book, set on [load]; used when saving words. */
+    private var currentBookId: Long = -1L
+
+    private val _bookTitle = MutableStateFlow<String?>(null)
+
+    /** Title of the open book, set on Ready; used as the saved-word's book title. */
+    val bookTitle: StateFlow<String?> = _bookTitle.asStateFlow()
 
     private val _uiState = MutableStateFlow<ReaderUiState>(ReaderUiState.Loading)
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
@@ -139,6 +150,7 @@ class ReaderViewModel @Inject constructor(
     private var saveJob: Job? = null
 
     fun load(bookId: Long) {
+        currentBookId = bookId
         val previousPublication = (_uiState.value as? ReaderUiState.Ready)?.publication
         _uiState.value = ReaderUiState.Loading
         viewModelScope.launch {
@@ -153,6 +165,7 @@ class ReaderViewModel @Inject constructor(
                 return@launch
             }
             previousPublication?.close()
+            _bookTitle.value = book.title.ifBlank { publication.metadata.title ?: book.title }
             val initialLocator = repository.getProgress(bookId)
                 ?.locatorJson
                 ?.let { runCatching { Locator.fromJSON(JSONObject(it)) }.getOrNull() }
@@ -210,6 +223,29 @@ class ReaderViewModel @Inject constructor(
     fun seekTo(fraction: Float) {
         val locator = TocResolver.positionForFraction(positions, fraction) ?: return
         goTo(locator)
+    }
+
+    /**
+     * Persists a translated [term]/[translation] from the reader popover as a saved word, tagged
+     * with the current book and an optional [contextSentence] (present for word taps). No-op if no
+     * book is loaded.
+     */
+    fun saveCurrentWord(term: String, translation: String, contextSentence: String?) {
+        val bookId = currentBookId
+        if (bookId < 0) return
+        viewModelScope.launch {
+            savedWordsRepository.save(
+                SavedWord(
+                    id = 0,
+                    term = term,
+                    translation = translation,
+                    contextSentence = contextSentence,
+                    bookId = bookId,
+                    bookTitle = bookTitle.value ?: "",
+                    createdAt = System.currentTimeMillis(),
+                ),
+            )
+        }
     }
 
     /**

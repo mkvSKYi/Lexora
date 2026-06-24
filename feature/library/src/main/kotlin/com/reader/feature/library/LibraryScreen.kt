@@ -18,9 +18,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -47,6 +49,7 @@ import java.io.File
 @Composable
 fun LibraryScreen(
     onBookClick: (Long) -> Unit,
+    onOpenSaved: () -> Unit,
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -65,7 +68,16 @@ fun LibraryScreen(
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Library") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Library") },
+                actions = {
+                    IconButton(onClick = onOpenSaved) {
+                        Icon(Icons.Filled.Bookmarks, contentDescription = "Saved words")
+                    }
+                },
+            )
+        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(onClick = { pickEpub.launch(arrayOf("application/epub+zip")) }) {

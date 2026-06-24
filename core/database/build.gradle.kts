@@ -28,6 +28,8 @@ android {
 
     sourceSets["main"].kotlin.srcDir("src/main/kotlin")
     sourceSets["test"].kotlin.srcDir("src/test/kotlin")
+    // Expose exported Room schemas to MigrationTestHelper as test assets.
+    sourceSets["test"].assets.srcDir("$projectDir/schemas")
 }
 
 ksp {

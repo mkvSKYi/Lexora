@@ -10,6 +10,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,6 +31,7 @@ private val PopoverShape
 fun TranslationPopover(
     state: TranslationPopupState,
     onDismiss: () -> Unit,
+    onSave: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -41,7 +43,7 @@ fun TranslationPopover(
     ) {
         when (state) {
             TranslationPopupState.Loading -> LoadingContent()
-            is TranslationPopupState.Result -> ResultContent(state)
+            is TranslationPopupState.Result -> ResultContent(state, onSave)
             is TranslationPopupState.Error -> ErrorContent(state)
         }
     }
@@ -67,9 +69,9 @@ private fun LoadingContent() {
 }
 
 @Composable
-private fun ResultContent(state: TranslationPopupState.Result) {
+private fun ResultContent(state: TranslationPopupState.Result, onSave: () -> Unit) {
     Column(
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(
@@ -82,6 +84,14 @@ private fun ResultContent(state: TranslationPopupState.Result) {
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface,
         )
+        Row(
+            modifier = Modifier.padding(top = 4.dp),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            TextButton(onClick = onSave) {
+                Text(text = "Save")
+            }
+        }
     }
 }
 
