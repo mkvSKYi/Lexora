@@ -40,6 +40,9 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
+    // Lifecycle / ViewModel
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+
     // Hilt
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
