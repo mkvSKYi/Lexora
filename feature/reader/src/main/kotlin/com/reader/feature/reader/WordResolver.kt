@@ -87,6 +87,16 @@ internal object WordResolver {
             var rect = wordRange.getBoundingClientRect();
             if (!rect || (rect.width === 0 && rect.height === 0)) return null;
 
+            // Reject taps that don't actually land on the word. caretRangeFromPoint snaps to
+            // the nearest caret even for taps in empty margins / above or below the text, which
+            // would otherwise translate a word the user didn't tap. A small padding keeps
+            // near-misses on a real word working.
+            var pad = 6;
+            if (cssX < rect.left - pad || cssX > rect.right + pad ||
+                cssY < rect.top - pad || cssY > rect.bottom + pad) {
+              return null;
+            }
+
             return JSON.stringify({
               word: word,
               left: rect.left * dpr,
