@@ -25,6 +25,7 @@ rootProject.name = "reader"
 include(":app")
 include(":core:designsystem")
 include(":core:database")
+include(":core:dictionary")
 include(":core:data")
 include(":feature:library")
 include(":feature:saved")
