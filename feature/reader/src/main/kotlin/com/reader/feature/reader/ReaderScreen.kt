@@ -10,8 +10,12 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -37,6 +41,8 @@ import androidx.compose.ui.unit.dp
 import androidx.fragment.compose.AndroidFragment
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.reader.feature.reader.brightness.BrightnessIndicator
+import com.reader.feature.reader.brightness.nextBrightness
 import com.reader.feature.reader.chrome.ReaderChrome
 import com.reader.feature.reader.navigation.ReaderBottomBar
 import com.reader.feature.reader.navigation.ReaderTocSheet
@@ -57,6 +63,9 @@ private const val MAX_WARMTH_ALPHA = 0.4f
 
 /** The amber tint color used for the warmth overlay. */
 private val WARMTH_COLOR = Color(0xFFFF8C00)
+
+/** Aurora accent used by the reader chrome + progress hairline. */
+internal val AURORA_ACCENT = Color(0xFF9B8CFF)
 
 @Composable
 fun ReaderScreen(
@@ -81,6 +90,11 @@ fun ReaderScreen(
     // Brief "Saved" confirmation shown after a word is saved from the popover.
     val snackbarHostState = remember { SnackbarHostState() }
     val snackbarScope = rememberCoroutineScope()
+
+    // Right-side brightness swipe: the level to render in the indicator (null = hidden).
+    var brightnessIndicator by remember { mutableStateOf<Float?>(null) }
+    val brightnessScope = rememberCoroutineScope()
+    var brightnessHideJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
     val toc by viewModel.toc.collectAsStateWithLifecycle()
     val currentChapterHref by viewModel.currentChapterHref.collectAsStateWithLifecycle()
@@ -179,6 +193,19 @@ fun ReaderScreen(
                         viewModel.saveCurrentWord(term, translation, context)
                         snackbarScope.launch { snackbarHostState.showSnackbar("Saved") }
                     },
+                    onBrightnessDrag = { dy, h ->
+                        brightnessHideJob?.cancel()
+                        val base = brightnessIndicator ?: (brightness ?: 0.5f)
+                        val next = nextBrightness(base, dy, h)
+                        brightnessIndicator = next
+                        viewModel.setBrightness(next)
+                    },
+                    onBrightnessDragEnd = {
+                        brightnessHideJob = brightnessScope.launch {
+                            delay(600)
+                            brightnessIndicator = null
+                        }
+                    },
                 )
             }
 
@@ -194,6 +221,30 @@ fun ReaderScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(WARMTH_COLOR.copy(alpha = warmth * MAX_WARMTH_ALPHA)),
+                )
+            }
+
+            // Always-on thin reading-progress hairline at the very bottom edge. Drawn before the
+            // chrome bottom bar (which covers it when chrome is visible).
+            LinearProgressIndicator(
+                progress = { currentProgression.coerceIn(0f, 1f) },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(2.dp),
+                color = AURORA_ACCENT,
+                trackColor = Color.Transparent,
+            )
+
+            // Right-side vertical-swipe brightness indicator. The gesture itself is detected by the
+            // navigator's InputListener.onDrag (see EpubReaderFragment) so it coexists with taps and
+            // page-turns without an overlay stealing input; here we only render the indicator.
+            brightnessIndicator?.let { level ->
+                BrightnessIndicator(
+                    level = level,
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(end = 16.dp),
                 )
             }
         }
@@ -220,8 +271,12 @@ private fun EpubReader(
     onLocatorChanged: (Long, org.readium.r2.shared.publication.Locator) -> Unit,
     onSelection: (SelectionEvent) -> Unit,
     onSaveWord: (term: String, translation: String, contextSentence: String?) -> Unit,
+    onBrightnessDrag: (dyPx: Float, heightPx: Float) -> Unit,
+    onBrightnessDragEnd: () -> Unit,
 ) {
     val translationVm: TranslationViewModel = hiltViewModel()
+    val currentBrightnessDrag by rememberUpdatedState(onBrightnessDrag)
+    val currentBrightnessDragEnd by rememberUpdatedState(onBrightnessDragEnd)
     val popup by translationVm.popupState.collectAsStateWithLifecycle()
 
     // Dictionary lookup for single-word taps, rendered in a modal bottom sheet.
@@ -274,6 +329,8 @@ private fun EpubReader(
                     onLocatorChanged(bookId, locator)
                 },
                 onSelection = { event -> onSelectionInternal(event) },
+                onBrightnessDrag = { dy, h -> currentBrightnessDrag(dy, h) },
+                onBrightnessDragEnd = { currentBrightnessDragEnd() },
             ),
         )
     }
