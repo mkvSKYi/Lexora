@@ -4,25 +4,92 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.reader.core.data.LibraryRepository
 import com.reader.core.data.model.ReadingProgress
+import com.reader.core.data.preferences.ReaderPreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import org.readium.r2.navigator.epub.EpubPreferences
+import org.readium.r2.navigator.epub.EpubPreferencesSerializer
+import org.readium.r2.shared.ExperimentalReadiumApi
 import org.readium.r2.shared.publication.Locator
 import javax.inject.Inject
 
+@OptIn(ExperimentalReadiumApi::class)
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
     private val repository: LibraryRepository,
     private val publicationOpener: PublicationOpener,
+    private val preferencesRepository: ReaderPreferencesRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ReaderUiState>(ReaderUiState.Loading)
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
+
+    private val preferencesSerializer = EpubPreferencesSerializer()
+
+    private val _epubPreferences = MutableStateFlow(EpubPreferences())
+
+    /**
+     * The current Readium reading-appearance preferences, loaded from persistence and updated
+     * via [updateEpubPreferences]. Always emits a valid value; a malformed persisted JSON
+     * falls back to defaults rather than crashing.
+     */
+    val epubPreferences: StateFlow<EpubPreferences> = _epubPreferences.asStateFlow()
+
+    private val _brightness = MutableStateFlow<Float?>(null)
+
+    /** Screen brightness override in 0f..1f, or null to follow the system. */
+    val brightness: StateFlow<Float?> = _brightness.asStateFlow()
+
+    private val _warmth = MutableStateFlow(0f)
+
+    /** Warmth (amber overlay) intensity in 0f..1f; 0 = off. */
+    val warmth: StateFlow<Float> = _warmth.asStateFlow()
+
+    init {
+        // Seed once from persistence. The ViewModel is the only writer of these preferences
+        // during a reading session, so continuously re-collecting observe() would echo our own
+        // persisted writes back into the StateFlows and race rapid changes. A fresh ViewModel on
+        // the next book open seeds again, preserving global persistence across books.
+        viewModelScope.launch {
+            val prefs = preferencesRepository.observe().first()
+            _epubPreferences.value = deserialize(prefs.epubPreferencesJson)
+            _brightness.value = prefs.brightness
+            _warmth.value = prefs.warmth
+        }
+    }
+
+    /** Updates the live brightness override and persists it. Null follows the system. */
+    fun setBrightness(value: Float?) {
+        _brightness.value = value
+        viewModelScope.launch { preferencesRepository.setBrightness(value) }
+    }
+
+    /** Updates the live warmth intensity and persists it. */
+    fun setWarmth(value: Float) {
+        _warmth.value = value
+        viewModelScope.launch { preferencesRepository.setWarmth(value) }
+    }
+
+    /** Updates the live preferences and persists them as Readium-serialized JSON. */
+    fun updateEpubPreferences(prefs: EpubPreferences) {
+        _epubPreferences.value = prefs
+        viewModelScope.launch {
+            preferencesRepository.setEpubPreferencesJson(preferencesSerializer.serialize(prefs))
+        }
+    }
+
+    private fun deserialize(json: String?): EpubPreferences {
+        if (json == null) return EpubPreferences()
+        return runCatching { preferencesSerializer.deserialize(json) }
+            .getOrDefault(EpubPreferences())
+    }
 
     private var saveJob: Job? = null
 

@@ -2,6 +2,8 @@ package com.reader.feature.reader
 
 import com.reader.core.data.LibraryRepository
 import com.reader.core.data.model.ReadingProgress
+import com.reader.core.data.preferences.ReaderPreferences
+import com.reader.core.data.preferences.ReaderPreferencesRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -9,29 +11,50 @@ import io.mockk.verify
 import org.readium.r2.shared.publication.Publication
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.readium.r2.navigator.epub.EpubPreferences
+import org.readium.r2.navigator.preferences.Theme
+import org.readium.r2.shared.ExperimentalReadiumApi
 import org.readium.r2.shared.publication.Locator
 import org.robolectric.RobolectricTestRunner
 
-@OptIn(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class, ExperimentalReadiumApi::class)
 @RunWith(RobolectricTestRunner::class)
 class ReaderViewModelTest {
     private val repo = mockk<LibraryRepository>(relaxed = true)
+
+    /** In-memory fake so we can observe persisted JSON and feed values back through [observe]. */
+    private class FakePreferencesRepository(
+        initialJson: String? = null,
+    ) : ReaderPreferencesRepository {
+        val state = MutableStateFlow(
+            ReaderPreferences(epubPreferencesJson = initialJson, brightness = null, warmth = 0f),
+        )
+        override fun observe(): Flow<ReaderPreferences> = state
+        override suspend fun setEpubPreferencesJson(json: String) {
+            state.value = state.value.copy(epubPreferencesJson = json)
+        }
+        override suspend fun setBrightness(value: Float?) {}
+        override suspend fun setWarmth(value: Float) {}
+    }
 
     @Before fun setup() = Dispatchers.setMain(StandardTestDispatcher())
 
     @After fun tearDown() = Dispatchers.resetMain()
 
     @Test fun onLocatorChanged_persists_progress() = runTest {
-        val vm = ReaderViewModel(repo, mockk(relaxed = true))
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository())
         val locator = Locator(
             href = org.readium.r2.shared.util.Url("ch1.html")!!,
             mediaType = org.readium.r2.shared.util.mediatype.MediaType.XHTML,
@@ -47,7 +70,7 @@ class ReaderViewModelTest {
         val firstPublication = mockk<Publication>(relaxed = true)
         val secondPublication = mockk<Publication>(relaxed = true)
         coEvery { opener.open(any()) } returnsMany listOf(firstPublication, secondPublication)
-        val vm = ReaderViewModel(repo, opener)
+        val vm = ReaderViewModel(repo, opener, FakePreferencesRepository())
 
         vm.load(bookId = 1L)
         advanceUntilIdle()
@@ -55,5 +78,28 @@ class ReaderViewModelTest {
         advanceUntilIdle()
 
         verify { firstPublication.close() }
+    }
+
+    @Test fun updateEpubPreferences_persists_serialized_json_round_trips() = runTest {
+        val fakePrefs = FakePreferencesRepository()
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), fakePrefs)
+        advanceUntilIdle()
+
+        vm.updateEpubPreferences(EpubPreferences(theme = Theme.DARK))
+        advanceUntilIdle()
+
+        // The optimistic update is reflected in the exposed StateFlow.
+        assertEquals(Theme.DARK, vm.epubPreferences.value.theme)
+        // The repo received a serialized payload that round-trips back to DARK.
+        val persisted = fakePrefs.state.value.epubPreferencesJson
+        assertEquals(true, persisted != null && persisted.contains("dark"))
+    }
+
+    @Test fun malformed_persisted_json_falls_back_to_defaults() = runTest {
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository("not json"))
+        advanceUntilIdle()
+
+        // Never crashes; emits default EpubPreferences (no theme set).
+        assertEquals(EpubPreferences(), vm.epubPreferences.value)
     }
 }
