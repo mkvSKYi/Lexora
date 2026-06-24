@@ -232,7 +232,12 @@ class EpubReaderFragment : Fragment(), EpubNavigatorFragment.Listener {
             val json = navigator.evaluateJavascript(WordResolver.script(point.x, point.y))
             val parsed = parseResolved(json, "word") ?: return@launch
             session.onSelection(
-                SelectionEvent(parsed.text, parsed.rect, contextSentence = parsed.sentence),
+                SelectionEvent(
+                    parsed.text,
+                    parsed.rect,
+                    contextSentence = parsed.sentence,
+                    isWord = true,
+                ),
             )
         }
     }
@@ -252,7 +257,12 @@ class EpubReaderFragment : Fragment(), EpubNavigatorFragment.Listener {
             val parsed = parseResolved(json, "sentence") ?: return@launch
             // The long-pressed term already IS the sentence; no separate context needed.
             session.onSelection(
-                SelectionEvent(parsed.text, parsed.rect, contextSentence = null),
+                SelectionEvent(
+                    parsed.text,
+                    parsed.rect,
+                    contextSentence = null,
+                    isWord = false,
+                ),
             )
         }
     }

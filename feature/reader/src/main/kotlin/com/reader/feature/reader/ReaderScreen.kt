@@ -43,6 +43,8 @@ import com.reader.feature.reader.navigation.ReaderTocSheet
 import com.reader.feature.reader.settings.ReaderSettingsSheet
 import com.reader.feature.translation.TranslationPopover
 import com.reader.feature.translation.TranslationViewModel
+import com.reader.feature.translation.WordDictionarySheet
+import com.reader.feature.translation.WordLookupViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
@@ -222,6 +224,10 @@ private fun EpubReader(
     val translationVm: TranslationViewModel = hiltViewModel()
     val popup by translationVm.popupState.collectAsStateWithLifecycle()
 
+    // Dictionary lookup for single-word taps, rendered in a modal bottom sheet.
+    val wordVm: WordLookupViewModel = hiltViewModel()
+    val wordState by wordVm.lookupState.collectAsStateWithLifecycle()
+
     // Anchor for the popover: the tapped word's bounds in navigator-view pixels.
     var anchorRect by remember { mutableStateOf<RectF?>(null) }
 
@@ -233,9 +239,17 @@ private fun EpubReader(
     val currentOnSelection by rememberUpdatedState(onSelection)
     val onSelectionInternal: (SelectionEvent) -> Unit = remember {
         { event ->
-            anchorRect = event.rectInView
-            lastContextSentence = event.contextSentence
-            translationVm.onTextSelected(event.text)
+            if (event.isWord) {
+                // Single-word tap → dictionary bottom sheet. Stash the context for Save; do NOT
+                // touch the popover's anchor or trigger its translation.
+                lastContextSentence = event.contextSentence
+                wordVm.onWord(event.text)
+            } else {
+                // Long-press phrase/sentence → existing translation popover (unchanged).
+                anchorRect = event.rectInView
+                lastContextSentence = event.contextSentence
+                translationVm.onTextSelected(event.text)
+            }
             currentOnSelection(event)
         }
     }
@@ -338,6 +352,19 @@ private fun EpubReader(
                     )
                 }
             }
+        }
+
+        // Single-word tap → dictionary bottom sheet (ModalBottomSheet dismisses natively, so it
+        // needs no custom scrim/catcher like the phrase popover above).
+        wordState?.let { currentWordState ->
+            WordDictionarySheet(
+                state = currentWordState,
+                onSave = { term, translation ->
+                    onSaveWord(term, translation, lastContextSentence)
+                    wordVm.dismiss()
+                },
+                onDismiss = { wordVm.dismiss() },
+            )
         }
     }
 }

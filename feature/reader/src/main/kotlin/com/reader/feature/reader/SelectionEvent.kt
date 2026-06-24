@@ -12,9 +12,13 @@ import android.graphics.RectF
  *
  * [contextSentence] is the enclosing sentence for a tapped word (best-effort), used when
  * saving the word. It is null for the long-press path, where [text] already is the sentence.
+ *
+ * [isWord] distinguishes a single-word tap (true → routed to the dictionary bottom sheet) from a
+ * long-press phrase/sentence (false → routed to the existing translation popover).
  */
 data class SelectionEvent(
     val text: String,
     val rectInView: RectF,
     val contextSentence: String? = null,
+    val isWord: Boolean = true,
 )

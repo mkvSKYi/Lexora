@@ -51,6 +51,7 @@ dependencies {
     // Feature & core modules
     implementation(project(":core:designsystem"))
     implementation(project(":core:database"))
+    implementation(project(":core:dictionary"))
     implementation(project(":core:data"))
     implementation(project(":feature:library"))
     implementation(project(":feature:reader"))
