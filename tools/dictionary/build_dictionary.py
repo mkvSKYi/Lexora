@@ -90,7 +90,11 @@ def _iter_jsonl(path: str) -> Iterator[dict]:
             line = line.strip()
             if not line:
                 continue
-            yield json.loads(line)
+            try:
+                yield json.loads(line)
+            except json.JSONDecodeError:
+                # One malformed line must not abort a multi-GB build.
+                continue
 
 
 def build(
@@ -105,37 +109,72 @@ def build(
     `cap`, if set, limits the number of distinct entries inserted (for testing
     or quick runs in Task 3).
     """
+    # Wiktextract emits multiple objects per headword (one per pos/etymology).
+    # Merge them so a later bare sense never overwrites a richer one: keep the
+    # first IPA/POS we see, and union definitions + Ukrainian translations.
+    merged: dict[str, Entry] = {}
     con = sqlite3.connect(out_db_path)
     try:
         _create_schema(con)
-        inserted = 0
+        pending = 0
+        commit_every = 50_000
         for obj in _iter_jsonl(input_jsonl):
             entry = parse_entry(obj)
             if entry is None or entry.headword not in freq_words:
                 continue
 
             if entry.definitions or entry.uk_translations:
-                if cap is not None and inserted >= cap:
-                    continue
-                con.execute(
-                    "INSERT OR REPLACE INTO entries "
-                    "(headword, ipa, pos, definitions, uk_translations) "
-                    "VALUES (?, ?, ?, ?, ?)",
-                    (
-                        entry.headword,
-                        entry.ipa,
-                        entry.pos,
-                        json.dumps(entry.definitions, ensure_ascii=False),
-                        json.dumps(entry.uk_translations, ensure_ascii=False),
-                    ),
-                )
-                inserted += 1
+                existing = merged.get(entry.headword)
+                if existing is None:
+                    if cap is not None and len(merged) >= cap:
+                        # Headword is new but we're at the cap: don't add it
+                        # (forms below are still recorded).
+                        pass
+                    else:
+                        merged[entry.headword] = Entry(
+                            headword=entry.headword,
+                            ipa=entry.ipa,
+                            pos=entry.pos,
+                            definitions=list(entry.definitions),
+                            uk_translations=list(entry.uk_translations),
+                        )
+                else:
+                    if existing.ipa is None and entry.ipa:
+                        existing.ipa = entry.ipa
+                    if existing.pos is None and entry.pos:
+                        existing.pos = entry.pos
+                    for d in entry.definitions:
+                        if d not in existing.definitions:
+                            existing.definitions.append(d)
+                    for t in entry.uk_translations:
+                        if t not in existing.uk_translations:
+                            existing.uk_translations.append(t)
 
             for form, base in extract_forms(obj):
                 con.execute(
                     "INSERT OR REPLACE INTO forms (form, headword) VALUES (?, ?)",
                     (form, base),
                 )
+                pending += 1
+
+            # Periodic commits so a huge build doesn't hold one giant transaction.
+            if pending >= commit_every:
+                con.commit()
+                pending = 0
+
+        for entry in merged.values():
+            con.execute(
+                "INSERT OR REPLACE INTO entries "
+                "(headword, ipa, pos, definitions, uk_translations) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (
+                    entry.headword,
+                    entry.ipa,
+                    entry.pos,
+                    json.dumps(entry.definitions, ensure_ascii=False),
+                    json.dumps(entry.uk_translations, ensure_ascii=False),
+                ),
+            )
         con.commit()
     finally:
         con.close()
