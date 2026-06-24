@@ -3,7 +3,8 @@ package com.reader.feature.library
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -32,7 +33,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,6 +58,10 @@ fun LibraryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    var menuBook by remember { mutableStateOf<Book?>(null) }
+    var detailsBook by remember { mutableStateOf<Book?>(null) }
+    var pendingDelete by remember { mutableStateOf<Book?>(null) }
 
     androidx.compose.runtime.LaunchedEffect(Unit) {
         viewModel.importErrors.collect { message ->
@@ -94,10 +102,31 @@ fun LibraryScreen(
                     Bookshelf(
                         books = state.books,
                         onBookClick = onBookClick,
+                        onBookLongClick = { menuBook = it },
                         contentPadding = innerPadding,
                     )
                 }
         }
+    }
+
+    menuBook?.let { book ->
+        BookContextMenuSheet(
+            book = book,
+            onDetails = { menuBook = null; detailsBook = book },
+            onDelete = { menuBook = null; pendingDelete = book },
+            onDismiss = { menuBook = null },
+        )
+    }
+    detailsBook?.let { book ->
+        val percent by produceState(initialValue = 0.0, book.id) { value = viewModel.progressPercent(book.id) }
+        BookDetailsDialog(book = book, percent = percent, onDismiss = { detailsBook = null })
+    }
+    pendingDelete?.let { book ->
+        DeleteBookDialog(
+            book = book,
+            onConfirm = { viewModel.deleteBook(book); pendingDelete = null },
+            onDismiss = { pendingDelete = null },
+        )
     }
 }
 
@@ -116,6 +145,7 @@ private fun EmptyLibrary(modifier: Modifier = Modifier) {
 private fun Bookshelf(
     books: List<Book>,
     onBookClick: (Long) -> Unit,
+    onBookLongClick: (Book) -> Unit,
     contentPadding: PaddingValues,
 ) {
     LazyVerticalGrid(
@@ -131,15 +161,16 @@ private fun Bookshelf(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         items(items = books, key = { it.id }) { book ->
-            BookCard(book = book, onClick = { onBookClick(book.id) })
+            BookCard(book = book, onClick = { onBookClick(book.id) }, onLongClick = { onBookLongClick(book) })
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun BookCard(book: Book, onClick: () -> Unit) {
+private fun BookCard(book: Book, onClick: () -> Unit, onLongClick: () -> Unit) {
     androidx.compose.foundation.layout.Column(
-        modifier = Modifier.clickable(onClick = onClick),
+        modifier = Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick),
     ) {
         Box(
             modifier = Modifier
