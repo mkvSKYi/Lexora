@@ -60,6 +60,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.navigation.compose)
+    // FragmentActivity host required by fragment-compose AndroidFragment (Readium navigator)
+    implementation(libs.androidx.fragment)
 
     // Compose
     implementation(platform(libs.androidx.compose.bom))

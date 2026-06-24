@@ -71,6 +71,7 @@ androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-com
 
 # Fragment-Compose interop
 androidx-fragment-compose = { module = "androidx.fragment:fragment-compose", version.ref = "fragment" }
+androidx-fragment = { module = "androidx.fragment:fragment", version.ref = "fragment" }
 
 # Room
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
