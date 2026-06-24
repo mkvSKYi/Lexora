@@ -14,6 +14,13 @@ interface BookDao {
     @Query("SELECT * FROM books ORDER BY lastOpenedAt DESC, addedAt DESC")
     fun observeBooks(): Flow<List<BookEntity>>
 
+    @Query(
+        "SELECT b.*, COALESCE(rp.percent, 0.0) AS percent FROM books b " +
+            "LEFT JOIN reading_progress rp ON rp.bookId = b.id " +
+            "ORDER BY b.lastOpenedAt DESC, b.addedAt DESC",
+    )
+    fun observeBooksWithProgress(): Flow<List<BookWithProgressRow>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertBook(book: BookEntity): Long
 

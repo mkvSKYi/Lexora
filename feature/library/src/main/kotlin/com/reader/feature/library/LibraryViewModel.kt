@@ -25,8 +25,8 @@ class LibraryViewModel @Inject constructor(
 ) : ViewModel() {
 
     val uiState: StateFlow<LibraryUiState> =
-        repo.observeBooks()
-            .map<List<com.reader.core.data.model.Book>, LibraryUiState> { LibraryUiState.Content(it) }
+        repo.observeBooksWithProgress()
+            .map<List<com.reader.core.data.model.BookWithProgress>, LibraryUiState> { LibraryUiState.Content(it) }
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),
