@@ -39,6 +39,7 @@ class EpubReaderFragment : Fragment(), EpubNavigatorFragment.Listener {
     private var session: ReaderNavigatorHost.Session? = null
     private lateinit var navigator: EpubNavigatorFragment
 
+    @OptIn(org.readium.r2.shared.ExperimentalReadiumApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         val sessionId = arguments?.getLong(ARG_SESSION_ID, -1L) ?: -1L
         val session = ReaderNavigatorHost.get(sessionId)
@@ -55,6 +56,12 @@ class EpubReaderFragment : Fragment(), EpubNavigatorFragment.Listener {
         childFragmentManager.fragmentFactory = session.navigatorFactory.createFragmentFactory(
             initialLocator = session.initialLocator,
             listener = this,
+            configuration = EpubNavigatorFragment.Configuration(
+                // Sentence translation is driven by our own long-press → JS pipeline, so the
+                // native WebView text-selection toolbar must never appear. A no-op ActionMode
+                // callback suppresses it (we also inject CSS user-select:none per resource).
+                selectionActionModeCallback = NoOpActionModeCallback,
+            ),
         )
         super.onCreate(savedInstanceState)
     }
@@ -100,6 +107,16 @@ class EpubReaderFragment : Fragment(), EpubNavigatorFragment.Listener {
         // horizontal swipe still pages (handled by the navigator's R2ViewPager, which is
         // independent of InputListener). Returning true from onTap consumes the tap.
         navigator.addInputListener(tapListener)
+
+        // Readium's InputListener has no long-press event (verified against 3.1.2: onTap/onDrag/
+        // onKey only). Each reflowable page lives in an R2WebView created lazily by an
+        // R2EpubPageFragment. We attach an Android GestureDetector to every such WebView as it is
+        // created and resolve the sentence at the long-press point via JS. The callback also
+        // injects CSS user-select:none so a long-press can't start native text selection.
+        navigator.childFragmentManager.registerFragmentLifecycleCallbacks(
+            pageFragmentCallbacks,
+            false,
+        )
     }
 
     @OptIn(org.readium.r2.shared.ExperimentalReadiumApi::class)
@@ -109,8 +126,71 @@ class EpubReaderFragment : Fragment(), EpubNavigatorFragment.Listener {
         // captured tapListener. ::navigator is only initialized when a session exists.
         if (::navigator.isInitialized) {
             navigator.removeInputListener(tapListener)
+            navigator.childFragmentManager.unregisterFragmentLifecycleCallbacks(
+                pageFragmentCallbacks,
+            )
         }
         super.onDestroyView()
+    }
+
+    /**
+     * Attaches long-press handling to each reflowable page WebView as its view is created. The
+     * WebView is reached reflectively through Readium's R2EpubPageFragment.getWebView() (the page
+     * fragment classes are internal to the navigator module).
+     */
+    private val pageFragmentCallbacks = object : androidx.fragment.app.FragmentManager.FragmentLifecycleCallbacks() {
+        override fun onFragmentViewCreated(
+            fm: androidx.fragment.app.FragmentManager,
+            f: Fragment,
+            v: View,
+            savedInstanceState: Bundle?,
+        ) {
+            val webView = webViewOf(f) ?: return
+            attachLongPress(webView)
+        }
+    }
+
+    /** Returns the [android.webkit.WebView] owned by a Readium R2EpubPageFragment, or null. */
+    private fun webViewOf(fragment: Fragment): android.webkit.WebView? =
+        runCatching {
+            val getter = fragment.javaClass.getMethod("getWebView")
+            getter.invoke(fragment) as? android.webkit.WebView
+        }.getOrNull()
+
+    /**
+     * Installs a [android.view.GestureDetector] long-press listener on [webView] plus CSS that
+     * disables native text selection. The touch listener does NOT consume events (returns false),
+     * so taps/swipes/scrolling still reach the WebView and the navigator; it only observes them to
+     * detect a press-and-hold and capture its point.
+     */
+    private fun attachLongPress(webView: android.webkit.WebView) {
+        if (webView.getTag(R.id.reader_longpress_wired) == true) return
+        webView.setTag(R.id.reader_longpress_wired, true)
+
+        // Belt-and-suspenders against native selection: disable long-click selection at the view
+        // level and inject user-select:none. The no-op selectionActionModeCallback (set on the
+        // navigator Configuration) already suppresses the toolbar; this stops selection starting.
+        webView.isLongClickable = false
+        webView.setOnLongClickListener { true }
+        webView.evaluateJavascript(DISABLE_SELECTION_CSS, null)
+
+        var lastX = 0f
+        var lastY = 0f
+        val detector = android.view.GestureDetector(
+            webView.context,
+            object : android.view.GestureDetector.SimpleOnGestureListener() {
+                override fun onLongPress(e: android.view.MotionEvent) {
+                    onLongPressResolveSentence(lastX, lastY)
+                }
+            },
+        )
+        detector.setIsLongpressEnabled(true)
+        webView.setOnTouchListener { _, event ->
+            lastX = event.x
+            lastY = event.y
+            detector.onTouchEvent(event)
+            false // never consume: paging/scrolling/tap handling stay intact
+        }
     }
 
     @OptIn(org.readium.r2.shared.ExperimentalReadiumApi::class)
@@ -130,34 +210,37 @@ class EpubReaderFragment : Fragment(), EpubNavigatorFragment.Listener {
         val session = session ?: return
         val point = event.point // device pixels relative to the navigator view
         viewLifecycleOwner.lifecycleScope.launch {
-            // Readium 3.1.2 exposes no selection-change callback, only the pull-based
-            // currentSelection() snapshot. So we read it on tap: if the user has an active
-            // phrase selection it wins; otherwise we resolve the single tapped word.
-            val selection = navigator.currentSelection()
-            if (selection != null) {
-                emitSelection(selection.locator.text.highlight, selection.rect, session)
-                navigator.clearSelection()
-                return@launch
-            }
             val json = navigator.evaluateJavascript(WordResolver.script(point.x, point.y))
-            val parsed = parseWordResult(json) ?: return@launch
+            val parsed = parseResolved(json, "word") ?: return@launch
             session.onSelection(SelectionEvent(parsed.first, parsed.second))
         }
     }
 
-    private fun emitSelection(text: String?, rect: RectF?, session: ReaderNavigatorHost.Session) {
-        val trimmed = text?.trim().orEmpty()
-        if (trimmed.isEmpty() || rect == null) return
-        session.onSelection(SelectionEvent(trimmed, rect))
+    /**
+     * Resolve the sentence containing the long-pressed word and emit a [SelectionEvent] reusing
+     * the same translation pipeline as a tap. [pressX]/[pressY] are device pixels relative to the
+     * pressed WebView, which (full-bleed, single page) align with the navigator view space the JS
+     * and popover anchor against.
+     */
+    @OptIn(org.readium.r2.shared.ExperimentalReadiumApi::class)
+    private fun onLongPressResolveSentence(pressX: Float, pressY: Float) {
+        val session = session ?: return
+        if (!::navigator.isInitialized) return
+        viewLifecycleOwner.lifecycleScope.launch {
+            val json = navigator.evaluateJavascript(SentenceResolver.script(pressX, pressY))
+            val parsed = parseResolved(json, "sentence") ?: return@launch
+            session.onSelection(SelectionEvent(parsed.first, parsed.second))
+        }
     }
 
     /**
-     * Parse the JSON returned by [WordResolver]. Readium's [EpubNavigatorFragment.evaluateJavascript]
-     * returns the WebView's JSON-encoded result: our JS returns a JSON *string*, so it arrives
-     * either as a bare object `{...}` or wrapped/escaped as a quoted string `"{\"word\":...}"`.
-     * Returns the word + its rect (device pixels), or null when nothing resolved.
+     * Parse the JSON returned by [WordResolver]/[SentenceResolver].
+     * [EpubNavigatorFragment.evaluateJavascript] returns the WebView's JSON-encoded result: our JS
+     * returns a JSON *string*, so it arrives either as a bare object `{...}` or wrapped/escaped as a
+     * quoted string. [textKey] is the field holding the resolved text (`word` or `sentence`).
+     * Returns the text + its rect (device pixels), or null when nothing resolved.
      */
-    private fun parseWordResult(raw: String?): Pair<String, RectF>? {
+    private fun parseResolved(raw: String?, textKey: String): Pair<String, RectF>? {
         if (raw == null || raw == "null") return null
         val unwrapped = when {
             raw.startsWith("{") -> raw
@@ -166,15 +249,15 @@ class EpubReaderFragment : Fragment(), EpubNavigatorFragment.Listener {
         }
         return runCatching {
             val obj = JSONObject(unwrapped)
-            val word = obj.getString("word").trim()
-            if (word.isEmpty()) return null
+            val text = obj.getString(textKey).trim()
+            if (text.isEmpty()) return null
             val rect = RectF(
                 obj.getDouble("left").toFloat(),
                 obj.getDouble("top").toFloat(),
                 obj.getDouble("right").toFloat(),
                 obj.getDouble("bottom").toFloat(),
             )
-            word to rect
+            text to rect
         }.getOrNull()
     }
 
@@ -189,10 +272,32 @@ class EpubReaderFragment : Fragment(), EpubNavigatorFragment.Listener {
         private val CONTAINER_VIEW_ID = View.generateViewId()
         private const val NAVIGATOR_TAG = "EpubNavigatorFragment"
 
+        // Disables native text selection in the resource document, so a long-press never starts
+        // the WebView's selection. Injected once per resource as it loads.
+        private const val DISABLE_SELECTION_CSS =
+            "(function(){var s=document.createElement('style');" +
+                "s.textContent='*{-webkit-user-select:none!important;user-select:none!important;" +
+                "-webkit-touch-callout:none!important;}';" +
+                "(document.head||document.documentElement).appendChild(s);})();"
+
         fun argsFor(sessionId: Long): Bundle = Bundle().apply {
             putLong(ARG_SESSION_ID, sessionId)
         }
     }
+}
+
+/**
+ * An [android.view.ActionMode.Callback] that refuses to create any action mode. Supplied to the
+ * navigator's selection callback so the native text-selection toolbar never appears.
+ */
+private object NoOpActionModeCallback : android.view.ActionMode.Callback {
+    override fun onCreateActionMode(mode: android.view.ActionMode?, menu: android.view.Menu?) = false
+    override fun onPrepareActionMode(mode: android.view.ActionMode?, menu: android.view.Menu?) = false
+    override fun onActionItemClicked(
+        mode: android.view.ActionMode?,
+        item: android.view.MenuItem?,
+    ) = false
+    override fun onDestroyActionMode(mode: android.view.ActionMode?) {}
 }
 
 /**
