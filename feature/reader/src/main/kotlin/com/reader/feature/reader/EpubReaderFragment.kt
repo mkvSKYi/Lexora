@@ -231,7 +231,9 @@ class EpubReaderFragment : Fragment(), EpubNavigatorFragment.Listener {
         viewLifecycleOwner.lifecycleScope.launch {
             val json = navigator.evaluateJavascript(WordResolver.script(point.x, point.y))
             val parsed = parseResolved(json, "word") ?: return@launch
-            session.onSelection(SelectionEvent(parsed.first, parsed.second))
+            session.onSelection(
+                SelectionEvent(parsed.text, parsed.rect, contextSentence = parsed.sentence),
+            )
         }
     }
 
@@ -248,7 +250,10 @@ class EpubReaderFragment : Fragment(), EpubNavigatorFragment.Listener {
         viewLifecycleOwner.lifecycleScope.launch {
             val json = navigator.evaluateJavascript(SentenceResolver.script(pressX, pressY))
             val parsed = parseResolved(json, "sentence") ?: return@launch
-            session.onSelection(SelectionEvent(parsed.first, parsed.second))
+            // The long-pressed term already IS the sentence; no separate context needed.
+            session.onSelection(
+                SelectionEvent(parsed.text, parsed.rect, contextSentence = null),
+            )
         }
     }
 
@@ -257,9 +262,10 @@ class EpubReaderFragment : Fragment(), EpubNavigatorFragment.Listener {
      * [EpubNavigatorFragment.evaluateJavascript] returns the WebView's JSON-encoded result: our JS
      * returns a JSON *string*, so it arrives either as a bare object `{...}` or wrapped/escaped as a
      * quoted string. [textKey] is the field holding the resolved text (`word` or `sentence`).
-     * Returns the text + its rect (device pixels), or null when nothing resolved.
+     * Returns the text, its rect (device pixels), and an optional `sentence` context field, or
+     * null when nothing resolved.
      */
-    private fun parseResolved(raw: String?, textKey: String): Pair<String, RectF>? {
+    private fun parseResolved(raw: String?, textKey: String): Resolved? {
         if (raw == null || raw == "null") return null
         val unwrapped = when {
             raw.startsWith("{") -> raw
@@ -276,9 +282,16 @@ class EpubReaderFragment : Fragment(), EpubNavigatorFragment.Listener {
                 obj.getDouble("right").toFloat(),
                 obj.getDouble("bottom").toFloat(),
             )
-            text to rect
+            // `sentence` is only present from WordResolver and may be JSON null.
+            val sentence = obj.optString("sentence").takeIf {
+                obj.has("sentence") && !obj.isNull("sentence") && it.isNotBlank()
+            }
+            Resolved(text, rect, sentence)
         }.getOrNull()
     }
+
+    /** A resolved word/sentence: the [text], its [rect] (device pixels), and optional [sentence]. */
+    private data class Resolved(val text: String, val rect: RectF, val sentence: String?)
 
     // EpubNavigatorFragment.Listener: only onExternalLinkActivated lacks a default impl.
     @OptIn(org.readium.r2.shared.ExperimentalReadiumApi::class)

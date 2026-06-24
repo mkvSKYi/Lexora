@@ -1,7 +1,9 @@
 package com.reader.feature.reader
 
 import com.reader.core.data.LibraryRepository
+import com.reader.core.data.SavedWordsRepository
 import com.reader.core.data.model.ReadingProgress
+import com.reader.core.data.model.SavedWord
 import com.reader.core.data.preferences.ReaderPreferences
 import com.reader.core.data.preferences.ReaderPreferencesRepository
 import io.mockk.coEvery
@@ -34,6 +36,7 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class ReaderViewModelTest {
     private val repo = mockk<LibraryRepository>(relaxed = true)
+    private val savedWords = mockk<SavedWordsRepository>(relaxed = true)
 
     /** In-memory fake so we can observe persisted JSON and feed values back through [observe]. */
     private class FakePreferencesRepository(
@@ -55,7 +58,7 @@ class ReaderViewModelTest {
     @After fun tearDown() = Dispatchers.resetMain()
 
     @Test fun onLocatorChanged_persists_progress() = runTest {
-        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository())
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords)
         val locator = Locator(
             href = org.readium.r2.shared.util.Url("ch1.html")!!,
             mediaType = org.readium.r2.shared.util.mediatype.MediaType.XHTML,
@@ -71,7 +74,7 @@ class ReaderViewModelTest {
         val firstPublication = mockk<Publication>(relaxed = true)
         val secondPublication = mockk<Publication>(relaxed = true)
         coEvery { opener.open(any()) } returnsMany listOf(firstPublication, secondPublication)
-        val vm = ReaderViewModel(repo, opener, FakePreferencesRepository())
+        val vm = ReaderViewModel(repo, opener, FakePreferencesRepository(), savedWords)
 
         vm.load(bookId = 1L)
         advanceUntilIdle()
@@ -83,7 +86,7 @@ class ReaderViewModelTest {
 
     @Test fun updateEpubPreferences_persists_serialized_json_round_trips() = runTest {
         val fakePrefs = FakePreferencesRepository()
-        val vm = ReaderViewModel(repo, mockk(relaxed = true), fakePrefs)
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), fakePrefs, savedWords)
         advanceUntilIdle()
 
         vm.updateEpubPreferences(EpubPreferences(theme = Theme.DARK))
@@ -97,7 +100,7 @@ class ReaderViewModelTest {
     }
 
     @Test fun malformed_persisted_json_falls_back_to_defaults() = runTest {
-        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository("not json"))
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository("not json"), savedWords)
         advanceUntilIdle()
 
         // Never crashes; emits default EpubPreferences (no theme set).
@@ -105,13 +108,43 @@ class ReaderViewModelTest {
     }
 
     @Test fun onLocatorChanged_updates_progression() = runTest {
-        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository())
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords)
         vm.onLocatorChanged(bookId = 1L, locator = locatorAt("ch1.html", 0.42))
         assertEquals(0.42f, vm.currentProgression.value)
     }
 
+    @Test fun saveCurrentWord_persists_word_with_book_metadata() = runTest {
+        val opener = mockk<PublicationOpener>()
+        coEvery { opener.open(any()) } returns mockk<Publication>(relaxed = true)
+        coEvery { repo.getBook(7L) } returns com.reader.core.data.model.Book(
+            id = 7L,
+            title = "My Book",
+            author = null,
+            coverPath = null,
+            filePath = "/tmp/b.epub",
+            addedAt = 0L,
+            lastOpenedAt = null,
+        )
+        val vm = ReaderViewModel(repo, opener, FakePreferencesRepository(), savedWords)
+        vm.load(bookId = 7L)
+        advanceUntilIdle()
+
+        vm.saveCurrentWord("hund", "dog", "Der Hund läuft.")
+        advanceUntilIdle()
+
+        coVerify {
+            savedWords.save(
+                match<SavedWord> {
+                    it.id == 0L && it.term == "hund" && it.translation == "dog" &&
+                        it.contextSentence == "Der Hund läuft." && it.bookId == 7L &&
+                        it.bookTitle == "My Book"
+                },
+            )
+        }
+    }
+
     @Test fun goTo_emits_navigate_request() = runTest {
-        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository())
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords)
         val emitted = mutableListOf<Locator>()
         backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
             vm.navigateRequests.collect { emitted.add(it) }

@@ -9,6 +9,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -16,6 +18,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -37,6 +40,7 @@ import com.reader.feature.reader.settings.ReaderSettingsSheet
 import com.reader.feature.translation.TranslationPopover
 import com.reader.feature.translation.TranslationViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 
 /** Delay before the reader chrome auto-hides while the reader is left untouched. */
@@ -67,6 +71,10 @@ fun ReaderScreen(
 
     // Table-of-contents sheet toggle.
     var tocVisible by remember { mutableStateOf(false) }
+
+    // Brief "Saved" confirmation shown after a word is saved from the popover.
+    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarScope = rememberCoroutineScope()
 
     val toc by viewModel.toc.collectAsStateWithLifecycle()
     val currentChapterHref by viewModel.currentChapterHref.collectAsStateWithLifecycle()
@@ -161,8 +169,17 @@ fun ReaderScreen(
                     navigateRequests = viewModel.navigateRequests,
                     onLocatorChanged = viewModel::onLocatorChanged,
                     onSelection = onSelection,
+                    onSaveWord = { term, translation, context ->
+                        viewModel.saveCurrentWord(term, translation, context)
+                        snackbarScope.launch { snackbarHostState.showSnackbar("Saved") }
+                    },
                 )
             }
+
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
 
             // Warmth (amber) tint drawn over the page. A plain Box with no clickable /
             // pointerInput so word-tap, long-press, and swipe still reach the navigator.
@@ -196,6 +213,7 @@ private fun EpubReader(
     navigateRequests: kotlinx.coroutines.flow.SharedFlow<org.readium.r2.shared.publication.Locator>,
     onLocatorChanged: (Long, org.readium.r2.shared.publication.Locator) -> Unit,
     onSelection: (SelectionEvent) -> Unit,
+    onSaveWord: (term: String, translation: String, contextSentence: String?) -> Unit,
 ) {
     val translationVm: TranslationViewModel = hiltViewModel()
     val popup by translationVm.popupState.collectAsStateWithLifecycle()
@@ -203,11 +221,16 @@ private fun EpubReader(
     // Anchor for the popover: the tapped word's bounds in navigator-view pixels.
     var anchorRect by remember { mutableStateOf<RectF?>(null) }
 
+    // The enclosing sentence of the last selection (null for long-press), stashed so a Save
+    // tap on the resulting translation can persist it as context.
+    var lastContextSentence by remember { mutableStateOf<String?>(null) }
+
     // Forward selection events to the host while also driving translation + anchoring.
     val currentOnSelection by rememberUpdatedState(onSelection)
     val onSelectionInternal: (SelectionEvent) -> Unit = remember {
         { event ->
             anchorRect = event.rectInView
+            lastContextSentence = event.contextSentence
             translationVm.onTextSelected(event.text)
             currentOnSelection(event)
         }
@@ -280,6 +303,14 @@ private fun EpubReader(
                     onDismiss = {
                         anchorRect = null
                         translationVm.dismiss()
+                    },
+                    onSave = {
+                        val result = currentPopup as? com.reader.feature.translation.TranslationPopupState.Result
+                        if (result != null) {
+                            onSaveWord(result.source, result.translation, lastContextSentence)
+                            anchorRect = null
+                            translationVm.dismiss()
+                        }
                     },
                 )
             }
