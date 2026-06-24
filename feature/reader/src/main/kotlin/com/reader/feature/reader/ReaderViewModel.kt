@@ -74,8 +74,6 @@ class ReaderViewModel @Inject constructor(
     /** All publication positions, loaded on Ready; used to resolve a fraction seek to a locator. */
     private var positions: List<Locator> = emptyList()
 
-    private val _currentLocator = MutableStateFlow<Locator?>(null)
-
     private val _currentProgression = MutableStateFlow(0f)
 
     /** Reading progress of the current position in 0f..1f (from `totalProgression`; 0 default). */
@@ -184,7 +182,6 @@ class ReaderViewModel @Inject constructor(
             entry.copy(locator = locator)
         }
 
-        _currentLocator.value = null
         _currentProgression.value = 0f
         _currentChapterTitle.value = null
         _currentChapterHref.value = null
@@ -236,12 +233,11 @@ class ReaderViewModel @Inject constructor(
     }
 
     /**
-     * Updates the current locator and re-derives [currentProgression] and [currentChapterTitle]
-     * from it. Current chapter uses the reading-order-aware [TocResolver.currentEntryIndex] so a
+     * Re-derives [currentProgression] and [currentChapterTitle] from [locator]. Current chapter
+     * uses the reading-order-aware [TocResolver.currentEntryIndex] so a
      * resource without its own TOC entry maps to the closest preceding chapter in spine order.
      */
     private fun updateDerivedState(locator: Locator) {
-        _currentLocator.value = locator
         _currentProgression.value = (locator.locations.totalProgression ?: 0.0).toFloat()
 
         val currentHref = locator.href.toString().substringBefore('#')

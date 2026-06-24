@@ -78,8 +78,6 @@ private fun TocRow(
     onClick: () -> Unit,
 ) {
     val startPadding = ROW_BASE_PADDING + INDENT_PER_DEPTH * entry.depth
-    val background =
-        if (isCurrent) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
     val textColor =
         if (isCurrent) {
             MaterialTheme.colorScheme.onSecondaryContainer
@@ -94,7 +92,13 @@ private fun TocRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .background(background)
+            .then(
+                if (isCurrent) {
+                    Modifier.background(MaterialTheme.colorScheme.secondaryContainer)
+                } else {
+                    Modifier
+                },
+            )
             .padding(start = startPadding, end = ROW_BASE_PADDING, top = 12.dp, bottom = 12.dp),
     )
 }
