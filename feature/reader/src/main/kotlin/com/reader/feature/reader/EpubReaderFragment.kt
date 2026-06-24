@@ -104,6 +104,17 @@ class EpubReaderFragment : Fragment(), EpubNavigatorFragment.Listener {
     }
 
     @OptIn(org.readium.r2.shared.ExperimentalReadiumApi::class)
+    override fun onDestroyView() {
+        // Balance the addInputListener call in onViewCreated: across view recreation the
+        // navigator would otherwise accumulate listeners and leak this fragment via the
+        // captured tapListener. ::navigator is only initialized when a session exists.
+        if (::navigator.isInitialized) {
+            navigator.removeInputListener(tapListener)
+        }
+        super.onDestroyView()
+    }
+
+    @OptIn(org.readium.r2.shared.ExperimentalReadiumApi::class)
     private val tapListener = object : InputListener {
         override fun onTap(event: TapEvent): Boolean {
             onTapResolveWord(event)
