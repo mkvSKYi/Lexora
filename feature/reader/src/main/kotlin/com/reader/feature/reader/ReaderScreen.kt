@@ -24,6 +24,7 @@ import androidx.fragment.compose.AndroidFragment
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.reader.feature.reader.chrome.ReaderChrome
+import com.reader.feature.reader.settings.ReaderSettingsSheet
 import com.reader.feature.translation.TranslationPopover
 import com.reader.feature.translation.TranslationViewModel
 import kotlinx.coroutines.delay
@@ -46,8 +47,10 @@ fun ReaderScreen(
     // Chrome shows on open, auto-hides after a few seconds, and re-reveals on a top-edge tap.
     var chromeVisible by remember { mutableStateOf(true) }
 
-    // Settings sheet toggle. The sheet itself arrives in Task 5; for now "Aa" flips this flag.
+    // Appearance ("Aa") sheet toggle.
     var settingsVisible by remember { mutableStateOf(false) }
+
+    val epubPreferences by viewModel.epubPreferences.collectAsStateWithLifecycle()
 
     // Auto-hide: while visible, schedule a hide; each reveal restarts the timer.
     LaunchedEffect(chromeVisible) {
@@ -57,10 +60,18 @@ fun ReaderScreen(
         }
     }
 
+    if (settingsVisible) {
+        ReaderSettingsSheet(
+            prefs = epubPreferences,
+            onPrefsChange = viewModel::updateEpubPreferences,
+            onDismiss = { settingsVisible = false },
+        )
+    }
+
     ReaderChrome(
         visible = chromeVisible,
         onBack = onBack,
-        onAa = { settingsVisible = !settingsVisible },
+        onAa = { settingsVisible = true },
         onRevealStripTap = { chromeVisible = !chromeVisible },
         bottomBar = {},
     ) {
