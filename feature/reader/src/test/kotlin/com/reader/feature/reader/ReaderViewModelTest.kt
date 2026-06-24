@@ -88,12 +88,8 @@ class ReaderViewModelTest {
         vm.updateEpubPreferences(EpubPreferences(theme = Theme.DARK))
         advanceUntilIdle()
 
-        // Persisted JSON is non-null and the observed flow re-deserializes to the same value.
+        // The optimistic update is reflected in the exposed StateFlow.
         assertEquals(Theme.DARK, vm.epubPreferences.value.theme)
-        assertEquals(
-            Theme.DARK,
-            EpubPreferences(theme = Theme.DARK).theme,
-        )
         // The repo received a serialized payload that round-trips back to DARK.
         val persisted = fakePrefs.state.value.epubPreferencesJson
         assertEquals(true, persisted != null && persisted.contains("dark"))

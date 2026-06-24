@@ -11,6 +11,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import org.readium.r2.navigator.epub.EpubPreferences
@@ -52,12 +53,15 @@ class ReaderViewModel @Inject constructor(
     val warmth: StateFlow<Float> = _warmth.asStateFlow()
 
     init {
+        // Seed once from persistence. The ViewModel is the only writer of these preferences
+        // during a reading session, so continuously re-collecting observe() would echo our own
+        // persisted writes back into the StateFlows and race rapid changes. A fresh ViewModel on
+        // the next book open seeds again, preserving global persistence across books.
         viewModelScope.launch {
-            preferencesRepository.observe().collect { prefs ->
-                _epubPreferences.value = deserialize(prefs.epubPreferencesJson)
-                _brightness.value = prefs.brightness
-                _warmth.value = prefs.warmth
-            }
+            val prefs = preferencesRepository.observe().first()
+            _epubPreferences.value = deserialize(prefs.epubPreferencesJson)
+            _brightness.value = prefs.brightness
+            _warmth.value = prefs.warmth
         }
     }
 
