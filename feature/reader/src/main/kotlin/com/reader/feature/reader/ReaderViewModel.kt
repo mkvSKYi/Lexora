@@ -86,6 +86,11 @@ class ReaderViewModel @Inject constructor(
     /** Title of the TOC entry for the current position, or null when none resolves. */
     val currentChapterTitle: StateFlow<String?> = _currentChapterTitle.asStateFlow()
 
+    private val _currentChapterHref = MutableStateFlow<String?>(null)
+
+    /** Href of the TOC entry for the current position, used to highlight the active chapter. */
+    val currentChapterHref: StateFlow<String?> = _currentChapterHref.asStateFlow()
+
     private val _navigateRequests = MutableSharedFlow<Locator>(extraBufferCapacity = 1)
 
     /**
@@ -182,6 +187,7 @@ class ReaderViewModel @Inject constructor(
         _currentLocator.value = null
         _currentProgression.value = 0f
         _currentChapterTitle.value = null
+        _currentChapterHref.value = null
     }
 
     /** Depth-first flatten of links, matching [TocResolver.flatten]'s traversal order. */
@@ -241,7 +247,9 @@ class ReaderViewModel @Inject constructor(
         val currentHref = locator.href.toString().substringBefore('#')
         val entries = _toc.value
         val index = TocResolver.currentEntryIndex(entries, readingOrderHrefs, currentHref)
-        _currentChapterTitle.value = index?.let { entries.getOrNull(it)?.title }
+        val entry = index?.let { entries.getOrNull(it) }
+        _currentChapterTitle.value = entry?.title
+        _currentChapterHref.value = entry?.href
     }
 
     override fun onCleared() {

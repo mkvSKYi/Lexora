@@ -31,6 +31,7 @@ import androidx.fragment.compose.AndroidFragment
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.reader.feature.reader.chrome.ReaderChrome
+import com.reader.feature.reader.navigation.ReaderTocSheet
 import com.reader.feature.reader.settings.ReaderSettingsSheet
 import com.reader.feature.translation.TranslationPopover
 import com.reader.feature.translation.TranslationViewModel
@@ -62,6 +63,12 @@ fun ReaderScreen(
 
     // Appearance ("Aa") sheet toggle.
     var settingsVisible by remember { mutableStateOf(false) }
+
+    // Table-of-contents sheet toggle.
+    var tocVisible by remember { mutableStateOf(false) }
+
+    val toc by viewModel.toc.collectAsStateWithLifecycle()
+    val currentChapterHref by viewModel.currentChapterHref.collectAsStateWithLifecycle()
 
     val epubPreferences by viewModel.epubPreferences.collectAsStateWithLifecycle()
     val brightness by viewModel.brightness.collectAsStateWithLifecycle()
@@ -109,9 +116,22 @@ fun ReaderScreen(
         )
     }
 
+    if (tocVisible) {
+        ReaderTocSheet(
+            entries = toc,
+            currentHref = currentChapterHref,
+            onEntryClick = { entry ->
+                entry.locator?.let(viewModel::goTo)
+                tocVisible = false
+            },
+            onDismiss = { tocVisible = false },
+        )
+    }
+
     ReaderChrome(
         visible = chromeVisible,
         onBack = onBack,
+        onToc = { tocVisible = true },
         onAa = { settingsVisible = true },
         onRevealStripTap = { chromeVisible = !chromeVisible },
         bottomBar = {},
