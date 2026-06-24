@@ -7,6 +7,7 @@ import com.reader.core.data.model.Book
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -15,6 +16,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class LibraryViewModelTest {
     private val repo = mockk<LibraryRepository>(relaxed = true)
     private val importer = mockk<EpubImporter>(relaxed = true)
