@@ -13,6 +13,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -102,4 +103,32 @@ class ReaderViewModelTest {
         // Never crashes; emits default EpubPreferences (no theme set).
         assertEquals(EpubPreferences(), vm.epubPreferences.value)
     }
+
+    @Test fun onLocatorChanged_updates_progression() = runTest {
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository())
+        vm.onLocatorChanged(bookId = 1L, locator = locatorAt("ch1.html", 0.42))
+        assertEquals(0.42f, vm.currentProgression.value)
+    }
+
+    @Test fun goTo_emits_navigate_request() = runTest {
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository())
+        val emitted = mutableListOf<Locator>()
+        backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
+            vm.navigateRequests.collect { emitted.add(it) }
+        }
+
+        val target = locatorAt("ch2.html", 0.5)
+        vm.goTo(target)
+        advanceUntilIdle()
+
+        assertEquals(listOf(target), emitted)
+        // goTo optimistically updates progression too.
+        assertEquals(0.5f, vm.currentProgression.value)
+    }
+
+    private fun locatorAt(href: String, progression: Double) = Locator(
+        href = org.readium.r2.shared.util.Url(href)!!,
+        mediaType = org.readium.r2.shared.util.mediatype.MediaType.XHTML,
+        locations = Locator.Locations(totalProgression = progression),
+    )
 }

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,6 +44,7 @@ private val REVEAL_STRIP_HEIGHT = 56.dp
  *
  * @param visible whether the bars are currently shown.
  * @param onBack invoked by the back navigation icon.
+ * @param onToc invoked by the TOC action (opens the table-of-contents sheet).
  * @param onAa invoked by the "Aa" action (opens reading-appearance settings).
  * @param onRevealStripTap invoked when the top-edge reveal strip is tapped.
  * @param bottomBar bottom slot, anchored to the bottom edge under the same [visible] state.
@@ -53,6 +55,7 @@ private val REVEAL_STRIP_HEIGHT = 56.dp
 fun ReaderChrome(
     visible: Boolean,
     onBack: () -> Unit,
+    onToc: () -> Unit,
     onAa: () -> Unit,
     onRevealStripTap: () -> Unit,
     bottomBar: @Composable () -> Unit,
@@ -91,6 +94,12 @@ fun ReaderChrome(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onToc) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.List,
+                            contentDescription = "Table of contents",
+                        )
+                    }
                     TextButton(onClick = onAa) {
                         Text("Aa")
                     }

@@ -31,6 +31,8 @@ import androidx.fragment.compose.AndroidFragment
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.reader.feature.reader.chrome.ReaderChrome
+import com.reader.feature.reader.navigation.ReaderBottomBar
+import com.reader.feature.reader.navigation.ReaderTocSheet
 import com.reader.feature.reader.settings.ReaderSettingsSheet
 import com.reader.feature.translation.TranslationPopover
 import com.reader.feature.translation.TranslationViewModel
@@ -62,6 +64,14 @@ fun ReaderScreen(
 
     // Appearance ("Aa") sheet toggle.
     var settingsVisible by remember { mutableStateOf(false) }
+
+    // Table-of-contents sheet toggle.
+    var tocVisible by remember { mutableStateOf(false) }
+
+    val toc by viewModel.toc.collectAsStateWithLifecycle()
+    val currentChapterHref by viewModel.currentChapterHref.collectAsStateWithLifecycle()
+    val currentProgression by viewModel.currentProgression.collectAsStateWithLifecycle()
+    val currentChapterTitle by viewModel.currentChapterTitle.collectAsStateWithLifecycle()
 
     val epubPreferences by viewModel.epubPreferences.collectAsStateWithLifecycle()
     val brightness by viewModel.brightness.collectAsStateWithLifecycle()
@@ -109,12 +119,31 @@ fun ReaderScreen(
         )
     }
 
+    if (tocVisible) {
+        ReaderTocSheet(
+            entries = toc,
+            currentHref = currentChapterHref,
+            onEntryClick = { entry ->
+                entry.locator?.let(viewModel::goTo)
+                tocVisible = false
+            },
+            onDismiss = { tocVisible = false },
+        )
+    }
+
     ReaderChrome(
         visible = chromeVisible,
         onBack = onBack,
+        onToc = { tocVisible = true },
         onAa = { settingsVisible = true },
         onRevealStripTap = { chromeVisible = !chromeVisible },
-        bottomBar = {},
+        bottomBar = {
+            ReaderBottomBar(
+                progression = currentProgression,
+                chapterTitle = currentChapterTitle,
+                onSeek = viewModel::seekTo,
+            )
+        },
     ) {
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -129,6 +158,7 @@ fun ReaderScreen(
                     bookId = bookId,
                     state = state,
                     epubPreferences = viewModel.epubPreferences,
+                    navigateRequests = viewModel.navigateRequests,
                     onLocatorChanged = viewModel::onLocatorChanged,
                     onSelection = onSelection,
                 )
@@ -163,6 +193,7 @@ private fun EpubReader(
     bookId: Long,
     state: ReaderUiState.Ready,
     epubPreferences: kotlinx.coroutines.flow.StateFlow<org.readium.r2.navigator.epub.EpubPreferences>,
+    navigateRequests: kotlinx.coroutines.flow.SharedFlow<org.readium.r2.shared.publication.Locator>,
     onLocatorChanged: (Long, org.readium.r2.shared.publication.Locator) -> Unit,
     onSelection: (SelectionEvent) -> Unit,
 ) {
@@ -208,6 +239,14 @@ private fun EpubReader(
 
     DisposableEffect(sessionId) {
         onDispose { ReaderNavigatorHost.unregister(sessionId) }
+    }
+
+    // Route navigate requests (chapter jump / fraction seek) from the ViewModel through the
+    // session's goTo hook, which the fragment fulfils against the live navigator.
+    LaunchedEffect(sessionId, navigateRequests) {
+        navigateRequests.collect { locator ->
+            ReaderNavigatorHost.get(sessionId)?.goTo?.invoke(locator)
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
