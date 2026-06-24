@@ -2,7 +2,6 @@ package com.reader.feature.reader
 
 import android.graphics.RectF
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -142,7 +141,6 @@ class EpubReaderFragment : Fragment(), EpubNavigatorFragment.Listener {
             val json = navigator.evaluateJavascript(WordResolver.script(point.x, point.y))
             val parsed = parseWordResult(json) ?: return@launch
             session.onSelection(SelectionEvent(parsed.first, parsed.second))
-            Log.d(TAG, "word=${parsed.first} rect=${parsed.second}")
         }
     }
 
@@ -150,7 +148,6 @@ class EpubReaderFragment : Fragment(), EpubNavigatorFragment.Listener {
         val trimmed = text?.trim().orEmpty()
         if (trimmed.isEmpty() || rect == null) return
         session.onSelection(SelectionEvent(trimmed, rect))
-        Log.d(TAG, "selection=$trimmed rect=$rect")
     }
 
     /**
@@ -188,7 +185,6 @@ class EpubReaderFragment : Fragment(), EpubNavigatorFragment.Listener {
 
     companion object {
         const val ARG_SESSION_ID = "sessionId"
-        private const val TAG = "SelectionEvent"
         private val CONTAINER_VIEW_ID = View.generateViewId()
         private const val NAVIGATOR_TAG = "EpubNavigatorFragment"
 
