@@ -41,6 +41,9 @@ dependencies {
     // Coroutines
     implementation(libs.kotlinx.coroutines.core)
 
+    // DataStore (reader preferences)
+    implementation(libs.androidx.datastore.preferences)
+
     // Readium (used by Task 4)
     implementation(libs.readium.shared)
     implementation(libs.readium.streamer)
