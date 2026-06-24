@@ -54,6 +54,7 @@ dependencies {
     implementation(project(":core:data"))
     implementation(project(":feature:library"))
     implementation(project(":feature:reader"))
+    implementation(project(":feature:saved"))
 
     // AndroidX
     implementation(libs.androidx.core.ktx)
