@@ -32,6 +32,8 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:dictionary"))
+
     // Compose (for the translation popover, added in Task 4)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)

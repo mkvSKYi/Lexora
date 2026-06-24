@@ -12,10 +12,15 @@ interface DictionaryRepository {
     suspend fun lookup(word: String): DictionaryEntry?
 }
 
-class SqliteDictionaryRepository @Inject constructor(
+class SqliteDictionaryRepository(
     @param:ApplicationContext private val context: Context,
-    private val openOverride: File? = null,
+    private val openOverride: File?,
 ) : DictionaryRepository {
+
+    // Hilt-injected production constructor. The override is a test-only seam, so it is kept off the
+    // injected path (Dagger can't provide a bare File) and defaulted to null here.
+    @Inject
+    constructor(@ApplicationContext context: Context) : this(context, openOverride = null)
 
     override suspend fun lookup(word: String): DictionaryEntry? = withContext(Dispatchers.IO) {
         val w = word.trim().lowercase()
