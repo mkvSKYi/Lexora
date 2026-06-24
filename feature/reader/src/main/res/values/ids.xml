@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Boolean tag marking a resource WebView as already wired for long-press handling
+         (see EpubReaderFragment.attachLongPress). Must be a real resource id: View.setTag(int,…)
+         rejects arbitrary ints. -->
+    <item name="reader_longpress_wired" type="id" />
+</resources>
