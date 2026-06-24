@@ -136,6 +136,7 @@ class EpubReaderFragment : Fragment(), EpubNavigatorFragment.Listener {
             val selection = navigator.currentSelection()
             if (selection != null) {
                 emitSelection(selection.locator.text.highlight, selection.rect, session)
+                navigator.clearSelection()
                 return@launch
             }
             val json = navigator.evaluateJavascript(WordResolver.script(point.x, point.y))
