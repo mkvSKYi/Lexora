@@ -27,6 +27,7 @@ class ReaderViewModel @Inject constructor(
     private var saveJob: Job? = null
 
     fun load(bookId: Long) {
+        val previousPublication = (_uiState.value as? ReaderUiState.Ready)?.publication
         _uiState.value = ReaderUiState.Loading
         viewModelScope.launch {
             val book = repository.getBook(bookId)
@@ -39,6 +40,7 @@ class ReaderViewModel @Inject constructor(
                 _uiState.value = ReaderUiState.Error("Unable to open this book")
                 return@launch
             }
+            previousPublication?.close()
             val initialLocator = repository.getProgress(bookId)
                 ?.locatorJson
                 ?.let { runCatching { Locator.fromJSON(JSONObject(it)) }.getOrNull() }

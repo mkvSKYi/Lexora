@@ -2,8 +2,11 @@ package com.reader.feature.reader
 
 import com.reader.core.data.LibraryRepository
 import com.reader.core.data.model.ReadingProgress
+import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import io.mockk.verify
+import org.readium.r2.shared.publication.Publication
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -37,5 +40,20 @@ class ReaderViewModelTest {
         vm.onLocatorChanged(bookId = 3L, locator = locator)
         advanceUntilIdle()
         coVerify { repo.saveProgress(match<ReadingProgress> { it.bookId == 3L && it.percent == 0.5 }) }
+    }
+
+    @Test fun load_twice_closes_previous_publication() = runTest {
+        val opener = mockk<PublicationOpener>()
+        val firstPublication = mockk<Publication>(relaxed = true)
+        val secondPublication = mockk<Publication>(relaxed = true)
+        coEvery { opener.open(any()) } returnsMany listOf(firstPublication, secondPublication)
+        val vm = ReaderViewModel(repo, opener)
+
+        vm.load(bookId = 1L)
+        advanceUntilIdle()
+        vm.load(bookId = 1L)
+        advanceUntilIdle()
+
+        verify { firstPublication.close() }
     }
 }
