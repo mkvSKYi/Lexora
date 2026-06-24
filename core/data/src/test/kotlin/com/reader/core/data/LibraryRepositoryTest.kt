@@ -3,6 +3,7 @@ package com.reader.core.data
 import app.cash.turbine.test
 import com.reader.core.data.model.Book
 import com.reader.core.database.dao.BookDao
+import com.reader.core.database.dao.SavedWordDao
 import com.reader.core.database.entity.BookEntity
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -14,7 +15,8 @@ import org.junit.Test
 
 class LibraryRepositoryTest {
     private val dao = mockk<BookDao>(relaxed = true)
-    private val repo = DefaultLibraryRepository(dao)
+    private val savedWordDao = mockk<SavedWordDao>(relaxed = true)
+    private val repo = DefaultLibraryRepository(dao, savedWordDao)
 
     @Test fun observeBooks_maps_entities_to_domain() = runTest {
         coEvery { dao.observeBooks() } returns flowOf(

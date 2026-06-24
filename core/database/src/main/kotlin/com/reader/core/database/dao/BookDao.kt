@@ -26,6 +26,9 @@ interface BookDao {
     @Query("DELETE FROM books WHERE id = :id")
     suspend fun deleteBook(id: Long)
 
+    @Query("DELETE FROM reading_progress WHERE bookId = :bookId")
+    suspend fun deleteProgress(bookId: Long)
+
     @Upsert
     suspend fun upsertProgress(progress: ReadingProgressEntity)
 
