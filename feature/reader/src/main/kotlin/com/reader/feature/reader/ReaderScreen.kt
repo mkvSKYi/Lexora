@@ -3,16 +3,8 @@ package com.reader.feature.reader
 import android.graphics.RectF
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -31,11 +23,15 @@ import androidx.compose.ui.window.PopupPositionProvider
 import androidx.fragment.compose.AndroidFragment
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.reader.feature.reader.chrome.ReaderChrome
 import com.reader.feature.translation.TranslationPopover
 import com.reader.feature.translation.TranslationViewModel
+import kotlinx.coroutines.delay
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** Delay before the reader chrome auto-hides while the reader is left untouched. */
+private const val CHROME_AUTO_HIDE_MILLIS = 3_000L
+
 @Composable
 fun ReaderScreen(
     bookId: Long,
@@ -47,25 +43,29 @@ fun ReaderScreen(
 
     LaunchedEffect(bookId) { viewModel.load(bookId) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                        )
-                    }
-                },
-            )
-        },
-    ) { innerPadding ->
+    // Chrome shows on open, auto-hides after a few seconds, and re-reveals on a top-edge tap.
+    var chromeVisible by remember { mutableStateOf(true) }
+
+    // Settings sheet toggle. The sheet itself arrives in Task 5; for now "Aa" flips this flag.
+    var settingsVisible by remember { mutableStateOf(false) }
+
+    // Auto-hide: while visible, schedule a hide; each reveal restarts the timer.
+    LaunchedEffect(chromeVisible) {
+        if (chromeVisible) {
+            delay(CHROME_AUTO_HIDE_MILLIS)
+            chromeVisible = false
+        }
+    }
+
+    ReaderChrome(
+        visible = chromeVisible,
+        onBack = onBack,
+        onAa = { settingsVisible = !settingsVisible },
+        onRevealStripTap = { chromeVisible = !chromeVisible },
+        bottomBar = {},
+    ) {
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
+            modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
             when (val state = uiState) {
