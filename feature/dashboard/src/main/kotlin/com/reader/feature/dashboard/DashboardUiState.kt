@@ -28,6 +28,7 @@ sealed interface DashboardUiState {
         val words: WordStats,
         val books: BookStats,
         val hasActivity: Boolean,
+        val todayActive: Boolean,
         val todayActions: Int,
         val dailyGoal: Int,
     ) : DashboardUiState {

@@ -109,6 +109,7 @@ class DashboardViewModel @Inject constructor(
                 finished = books.count { it.percent >= FINISHED_THRESHOLD },
             ),
             hasActivity = activeDays.isNotEmpty(),
+            todayActive = activeDays.contains(now),
             todayActions = byDay[now]?.let { it.wordsSaved + it.wordsReviewed } ?: 0,
             dailyGoal = DAILY_GOAL,
         )

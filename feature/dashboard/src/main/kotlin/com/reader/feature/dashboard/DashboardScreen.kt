@@ -49,6 +49,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
@@ -89,15 +90,23 @@ fun DashboardScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val haptic = LocalHapticFeedback.current
     var celebrateKey by remember { mutableIntStateOf(0) }
-    var mascotMood by remember { mutableStateOf(MascotMood.IDLE) }
+    var celebrating by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         viewModel.celebrateStreak.collect {
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             celebrateKey++
-            mascotMood = MascotMood.HAPPY
+            celebrating = true
             delay(4000)
-            mascotMood = MascotMood.IDLE
+            celebrating = false
         }
+    }
+    // Lexi reacts to your state: cheers on a milestone, reads when you've been active today,
+    // and naps when you haven't.
+    val todayActive = (state as? DashboardUiState.Content)?.todayActive == true
+    val mascotMood = when {
+        celebrating -> MascotMood.HAPPY
+        todayActive -> MascotMood.READING
+        else -> MascotMood.SLEEPY
     }
     DashboardContent(
         state = state,
@@ -144,7 +153,7 @@ fun DashboardContent(
                     verticalArrangement = Arrangement.spacedBy(20.dp),
                     contentPadding = PaddingValues(top = 48.dp, bottom = 32.dp),
                 ) {
-                    item { AppearOnce(delayMillis = 0) { Header(mascotMood) } }
+                    item { AppearOnce(delayMillis = 0) { LexiHero(mascotMood, state) } }
                     item { AppearOnce(delayMillis = 50) { XpRow(state.totalXp) } }
                     item { AppearOnce(delayMillis = 90) { StreakHero(state) } }
                     item { AppearOnce(delayMillis = 0) { DailyGoalCard(state) } }
@@ -161,17 +170,83 @@ fun DashboardContent(
 }
 
 @Composable
-private fun Header(mascotMood: MascotMood) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        LexoraMascot(
-            mood = mascotMood,
-            modifier = Modifier.size(76.dp),
-        )
-        Spacer(Modifier.width(12.dp))
+private fun LexiHero(mascotMood: MascotMood, state: DashboardUiState.Content) {
+    Column {
         Text(
-            text = "Your progress",
-            style = MaterialTheme.typography.headlineLarge,
+            text = todayDateLabel(),
+            color = AuroraAccent,
+            fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
+            letterSpacing = 1.5.sp,
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = greeting(),
+            style = MaterialTheme.typography.displaySmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Spacer(Modifier.height(16.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            LexoraMascot(mood = mascotMood, modifier = Modifier.size(92.dp))
+            SpeechBubble(
+                text = lexiMessage(state),
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+private fun todayDateLabel(): String {
+    val now = java.time.LocalDate.now()
+    val dow = now.dayOfWeek.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH)
+    val month = now.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.ENGLISH)
+    return "$dow, ${now.dayOfMonth} $month".uppercase(java.util.Locale.ENGLISH)
+}
+
+private fun greeting(): String {
+    val hour = java.time.LocalTime.now().hour
+    return when {
+        hour < 12 -> "Good morning"
+        hour < 18 -> "Good afternoon"
+        else -> "Good evening"
+    }
+}
+
+private fun lexiMessage(state: DashboardUiState.Content): String = when {
+    state.words.due > 0 -> "${state.words.due} word${if (state.words.due == 1) "" else "s"} ready to review!"
+    !state.todayActive -> "Let's read a little today 📖"
+    state.streak > 0 -> "${state.streak}-day streak — keep it lit! 🔥"
+    else -> "Tap a word while reading to save it."
+}
+
+@Composable
+private fun SpeechBubble(text: String, modifier: Modifier = Modifier) {
+    val bubble = MaterialTheme.colorScheme.surfaceVariant
+    Box(
+        modifier = modifier
+            .drawBehind {
+                val tw = 9.dp.toPx()
+                val cy = size.height / 2f
+                val tail = Path().apply {
+                    moveTo(0f, cy)
+                    lineTo(tw, cy - tw)
+                    lineTo(tw, cy + tw)
+                    close()
+                }
+                drawPath(tail, color = bubble)
+            }
+            .padding(start = 8.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(bubble)
+            .border(1.dp, LexHairline, RoundedCornerShape(18.dp))
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface,
         )
     }
 }

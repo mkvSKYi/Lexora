@@ -35,6 +35,7 @@ class DashboardScreenTest {
         words = words,
         books = books,
         hasActivity = hasActivity,
+        todayActive = hasActivity,
         todayActions = todayActions,
         dailyGoal = dailyGoal,
     )
@@ -49,7 +50,6 @@ class DashboardScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("Your progress").assertIsDisplayed()
         composeRule.onNodeWithText("5").assertIsDisplayed()
         composeRule.onNodeWithText("day streak").assertIsDisplayed()
         composeRule.onNodeWithText("12").assertIsDisplayed()
