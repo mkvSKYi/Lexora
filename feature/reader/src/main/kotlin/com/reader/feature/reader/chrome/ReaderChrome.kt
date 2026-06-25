@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -73,6 +74,7 @@ fun ReaderChrome(
     onBack: () -> Unit,
     onToc: () -> Unit,
     onToggleBookmark: () -> Unit,
+    onSearch: () -> Unit,
     onAa: () -> Unit,
     onRevealStripTap: () -> Unit,
     bottomBar: @Composable () -> Unit,
@@ -137,6 +139,13 @@ fun ReaderChrome(
                         Icon(
                             imageVector = if (bookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
                             contentDescription = "Bookmark",
+                            tint = Color.White,
+                        )
+                    }
+                    IconButton(onClick = onSearch) {
+                        Icon(
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = "Search",
                             tint = Color.White,
                         )
                     }

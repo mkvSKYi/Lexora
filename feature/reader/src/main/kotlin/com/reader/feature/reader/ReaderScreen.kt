@@ -49,6 +49,7 @@ import com.reader.feature.reader.brightness.nextBrightness
 import com.reader.feature.reader.chrome.ReaderChrome
 import com.reader.feature.reader.navigation.ReaderBottomBar
 import com.reader.feature.reader.navigation.ReaderTocSheet
+import com.reader.feature.reader.search.ReaderSearchScreen
 import com.reader.feature.reader.settings.ReaderSettingsSheet
 import com.reader.feature.translation.TranslationPopover
 import com.reader.feature.translation.TranslationViewModel
@@ -92,6 +93,10 @@ fun ReaderScreen(
 
     // Table-of-contents sheet toggle.
     var tocVisible by remember { mutableStateOf(false) }
+
+    // Full-screen in-book search overlay toggle.
+    var searchVisible by remember { mutableStateOf(false) }
+    val searchState by viewModel.searchState.collectAsStateWithLifecycle()
 
     // Brief "Saved" confirmation shown after a word is saved from the popover.
     val snackbarHostState = remember { SnackbarHostState() }
@@ -182,6 +187,7 @@ fun ReaderScreen(
         onBack = onBack,
         onToc = { tocVisible = true },
         onToggleBookmark = viewModel::toggleBookmark,
+        onSearch = { searchVisible = true },
         onAa = { settingsVisible = true },
         onRevealStripTap = { chromeVisible = !chromeVisible },
         bottomBar = {
@@ -283,6 +289,23 @@ fun ReaderScreen(
                 }
             }
         }
+    }
+
+    // Rendered last so it draws over the reader; the full-screen opaque Surface covers the navigator.
+    if (searchVisible) {
+        ReaderSearchScreen(
+            state = searchState,
+            onQuery = viewModel::search,
+            onResultClick = { result ->
+                viewModel.goTo(result.locator)
+                viewModel.clearSearch()
+                searchVisible = false
+            },
+            onClose = {
+                viewModel.clearSearch()
+                searchVisible = false
+            },
+        )
     }
 }
 

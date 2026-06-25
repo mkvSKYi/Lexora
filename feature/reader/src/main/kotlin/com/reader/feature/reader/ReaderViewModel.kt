@@ -14,6 +14,10 @@ import com.reader.feature.reader.highlight.HighlightState
 import com.reader.feature.reader.highlight.SavedWordHighlighter
 import com.reader.feature.reader.navigation.TocEntry
 import com.reader.feature.reader.navigation.TocResolver
+import com.reader.feature.reader.search.BookSearchState
+import com.reader.feature.reader.search.SearchResult
+import com.reader.feature.reader.search.SearchPaginator
+import com.reader.feature.reader.search.toSearchResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -38,6 +42,8 @@ import org.readium.r2.shared.ExperimentalReadiumApi
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.publication.services.positions
+import org.readium.r2.shared.publication.services.search.isSearchable
+import org.readium.r2.shared.publication.services.search.search
 import javax.inject.Inject
 
 @OptIn(ExperimentalReadiumApi::class)
@@ -154,6 +160,59 @@ class ReaderViewModel @Inject constructor(
      * reader screen, which routes each one through the [ReaderNavigatorHost.Session] go hook.
      */
     val navigateRequests: SharedFlow<Locator> = _navigateRequests.asSharedFlow()
+
+    private val _searchState = MutableStateFlow<BookSearchState>(BookSearchState.Idle)
+
+    /** Streaming full-text search state for the open book; see [search]. */
+    val searchState: StateFlow<BookSearchState> = _searchState.asStateFlow()
+    private var searchJob: Job? = null
+
+    /** Resolves a result href to its chapter title via the loaded TOC (best-effort containment match). */
+    private fun chapterTitleFor(href: String): String? =
+        _toc.value.lastOrNull { it.href.isNotEmpty() && href.contains(it.href) }?.title
+
+    /** Runs a full-text search of the open book; results stream into [searchState]. */
+    fun search(query: String) {
+        val q = query.trim()
+        searchJob?.cancel()
+        if (q.isEmpty()) {
+            _searchState.value = BookSearchState.Idle
+            return
+        }
+        val publication = (_uiState.value as? ReaderUiState.Ready)?.publication
+        if (publication == null || !publication.isSearchable) {
+            _searchState.value = BookSearchState.Error
+            return
+        }
+        _searchState.value = BookSearchState.Searching(emptyList())
+        searchJob = viewModelScope.launch {
+            val results = mutableListOf<SearchResult>()
+            val outcome = runCatching {
+                val iterator = publication.search(q)
+                    ?: error("Publication is not searchable")
+                try {
+                    SearchPaginator.paginate(iterator, RESULT_CAP) { page ->
+                        page.forEach { results += toSearchResult(it) { href -> chapterTitleFor(href) } }
+                        _searchState.value = BookSearchState.Searching(results.toList())
+                    }
+                } finally {
+                    iterator.close()
+                }
+            }
+            _searchState.value = when {
+                outcome.isFailure -> BookSearchState.Error
+                results.isEmpty() -> BookSearchState.Empty
+                else -> BookSearchState.Results(results.toList())
+            }
+        }
+    }
+
+    /** Cancels any running search and resets to idle. */
+    fun clearSearch() {
+        searchJob?.cancel()
+        searchJob = null
+        _searchState.value = BookSearchState.Idle
+    }
 
     init {
         // Seed once from persistence. The ViewModel is the only writer of these preferences
@@ -386,5 +445,6 @@ class ReaderViewModel @Inject constructor(
 
     private companion object {
         const val SAVE_DEBOUNCE_MS = 500L
+        const val RESULT_CAP = 200
     }
 }
