@@ -58,10 +58,15 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.reader.core.designsystem.mascot.LexoraMascot
+import com.reader.core.designsystem.mascot.MascotMood
 import com.reader.core.designsystem.motion.AnimatedCount
 import com.reader.core.designsystem.motion.AppearOnce
 import com.reader.core.designsystem.motion.Confetti
 import com.reader.core.designsystem.motion.pulse
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import com.reader.core.designsystem.theme.AuroraAccent
 import com.reader.core.designsystem.theme.AuroraAccentSoft
 import com.reader.core.designsystem.theme.AuroraDeep
@@ -76,16 +81,21 @@ fun DashboardScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val haptic = LocalHapticFeedback.current
     var celebrateKey by remember { mutableIntStateOf(0) }
+    var mascotMood by remember { mutableStateOf(MascotMood.IDLE) }
     LaunchedEffect(Unit) {
         viewModel.celebrateStreak.collect {
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             celebrateKey++
+            mascotMood = MascotMood.HAPPY
+            delay(4000)
+            mascotMood = MascotMood.IDLE
         }
     }
     DashboardContent(
         state = state,
         onStartReview = onStartReview,
         celebrateKey = celebrateKey,
+        mascotMood = mascotMood,
         modifier = modifier,
     )
 }
@@ -96,6 +106,7 @@ fun DashboardContent(
     onStartReview: () -> Unit,
     modifier: Modifier = Modifier,
     celebrateKey: Int = 0,
+    mascotMood: MascotMood = MascotMood.IDLE,
 ) {
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         // Aurora glow bleeding down from the top, the same signature the library uses.
@@ -125,7 +136,7 @@ fun DashboardContent(
                     verticalArrangement = Arrangement.spacedBy(20.dp),
                     contentPadding = PaddingValues(top = 24.dp, bottom = 28.dp),
                 ) {
-                    item { AppearOnce(delayMillis = 0) { Header() } }
+                    item { AppearOnce(delayMillis = 0) { Header(mascotMood) } }
                     item { AppearOnce(delayMillis = 90) { StreakHero(state) } }
                     item { AppearOnce(delayMillis = 180) { VocabularyCard(state.words, onStartReview) } }
                     item { AppearOnce(delayMillis = 270) { BooksCard(state.books) } }
@@ -140,21 +151,28 @@ fun DashboardContent(
 }
 
 @Composable
-private fun Header() {
-    Column {
-        Text(
-            text = "YOUR PROGRESS",
-            color = AuroraAccent,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 2.sp,
+private fun Header(mascotMood: MascotMood) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        LexoraMascot(
+            mood = mascotMood,
+            modifier = Modifier.size(72.dp),
         )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = "Today",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-        )
+        Spacer(Modifier.width(12.dp))
+        Column {
+            Text(
+                text = "YOUR PROGRESS",
+                color = AuroraAccent,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = "Today",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+            )
+        }
     }
 }
 

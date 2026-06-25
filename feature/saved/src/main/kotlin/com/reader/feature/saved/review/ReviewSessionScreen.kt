@@ -44,10 +44,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.reader.core.data.model.SavedWord
 import com.reader.core.data.review.ReviewGrade
+import com.reader.core.designsystem.mascot.LexoraMascot
+import com.reader.core.designsystem.mascot.MascotMood
 import com.reader.core.designsystem.motion.AnimatedCount
 import com.reader.core.designsystem.motion.AppearOnce
 import com.reader.core.designsystem.motion.Confetti
-import com.reader.core.designsystem.motion.pulse
 import com.reader.core.designsystem.theme.AuroraAccent
 import com.reader.core.designsystem.theme.AuroraAccentSoft
 
@@ -266,21 +267,8 @@ private fun SessionCelebration(reviewed: Int, learned: Int, onDone: () -> Unit) 
                 modifier = Modifier.fillMaxWidth().padding(32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(104.dp)
-                        .clip(CircleShape)
-                        .background(Brush.linearGradient(listOf(AuroraAccentSoft, AuroraAccent))),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.Filled.EmojiEvents,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(54.dp).pulse(max = 1.08f),
-                    )
-                }
-                Spacer(Modifier.height(22.dp))
+                LexoraMascot(mood = MascotMood.HAPPY, modifier = Modifier.size(140.dp))
+                Spacer(Modifier.height(14.dp))
                 Text(
                     text = "Nice work!",
                     style = MaterialTheme.typography.headlineLarge,
