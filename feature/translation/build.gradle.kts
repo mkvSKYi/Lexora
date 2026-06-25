@@ -29,6 +29,11 @@ android {
 
     sourceSets["main"].kotlin.srcDir("src/main/kotlin")
     sourceSets["test"].kotlin.srcDir("src/test/kotlin")
+
+    // Robolectric-backed Compose UI tests need Android resources on the unit-test classpath.
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
 }
 
 dependencies {
@@ -62,4 +67,8 @@ dependencies {
     testImplementation(libs.mockk)
     testImplementation(libs.turbine)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
