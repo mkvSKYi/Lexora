@@ -16,35 +16,40 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SavedWordsViewModelTest {
     private val repo = mockk<SavedWordsRepository>(relaxed = true)
-    @Before fun s() = Dispatchers.setMain(StandardTestDispatcher())
-    @After fun t() = Dispatchers.resetMain()
+    private fun word(id: Long, learned: Boolean) =
+        SavedWord(id, "t$id", "п$id", null, 1, "Book", id, learned)
 
-    @Test fun emits_content_from_repo() = runTest {
-        every { repo.observe() } returns flowOf(
-            listOf(SavedWord(1, "dog", "собака", null, 1, "Dune", 100)),
-        )
+    @Before fun setup() = Dispatchers.setMain(StandardTestDispatcher())
+    @After fun teardown() = Dispatchers.resetMain()
+
+    @Test fun content_carries_filtered_list_and_full_counts() = runTest {
+        every { repo.observe() } returns flowOf(listOf(word(1, true), word(2, false), word(3, true)))
         val vm = SavedWordsViewModel(repo)
         vm.uiState.test {
             assertEquals(SavedWordsUiState.Loading, awaitItem())
-            val c = awaitItem()
-            assertTrue(c is SavedWordsUiState.Content)
-            assertEquals(1, (c as SavedWordsUiState.Content).words.size)
+            val all = awaitItem() as SavedWordsUiState.Content
+            assertEquals(3, all.words.size)
+            assertEquals(2, all.learnedCount)
+            assertEquals(3, all.totalCount)
+            vm.setFilter(SavedWordsFilter.LEARNED)
+            val learned = awaitItem() as SavedWordsUiState.Content
+            assertEquals(listOf(1L, 3L), learned.words.map { it.id })
+            assertEquals(2, learned.learnedCount) // counts from the FULL list
             cancelAndIgnoreRemainingEvents()
         }
     }
 
-    @Test fun delete_delegates() = runTest {
+    @Test fun toggleLearned_delegates_to_repository() = runTest {
         every { repo.observe() } returns flowOf(emptyList())
         val vm = SavedWordsViewModel(repo)
-        vm.delete(7)
+        vm.toggleLearned(7, true)
         advanceUntilIdle()
-        coVerify { repo.delete(7) }
+        coVerify(exactly = 1) { repo.markLearned(7, true) }
     }
 }

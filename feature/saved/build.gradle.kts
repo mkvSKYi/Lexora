@@ -36,6 +36,9 @@ dependencies {
     implementation(project(":core:data"))
     implementation(project(":core:designsystem"))
 
+    // Feature modules
+    implementation(project(":feature:translation"))
+
     // Compose
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)

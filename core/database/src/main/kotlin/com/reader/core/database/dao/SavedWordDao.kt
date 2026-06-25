@@ -25,4 +25,7 @@ interface SavedWordDao {
 
     @Query("SELECT EXISTS(SELECT 1 FROM saved_words WHERE term = :term AND bookId = :bookId)")
     suspend fun existsByTermAndBook(term: String, bookId: Long): Boolean
+
+    @Query("UPDATE saved_words SET learned = :learned WHERE id = :id")
+    suspend fun updateLearned(id: Long, learned: Boolean)
 }

@@ -8,4 +8,5 @@ data class SavedWord(
     val bookId: Long,
     val bookTitle: String,
     val createdAt: Long,
+    val learned: Boolean,
 )
