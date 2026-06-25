@@ -158,9 +158,8 @@ class EpubReaderFragment : Fragment(), EpubNavigatorFragment.Listener {
 
                 // Re-highlight the visible resource when the learning set / toggle changes or a new
                 // resource becomes visible. evaluateJavascript runs in the current resource WebView.
-                val highlightSession = session
                 combine(
-                    highlightSession.highlight,
+                    session.highlight,
                     navigator.currentLocator.map { it.href }.distinctUntilChanged(),
                 ) { state, _ -> state }
                     .onEach { state ->
