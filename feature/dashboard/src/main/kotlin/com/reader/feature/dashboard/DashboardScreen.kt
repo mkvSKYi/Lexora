@@ -151,7 +151,7 @@ fun DashboardContent(
                         .statusBarsPadding()
                         .padding(horizontal = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(20.dp),
-                    contentPadding = PaddingValues(top = 48.dp, bottom = 32.dp),
+                    contentPadding = PaddingValues(top = 10.dp, bottom = 32.dp),
                 ) {
                     item { AppearOnce(delayMillis = 0) { LexiHero(mascotMood, state) } }
                     item { AppearOnce(delayMillis = 50) { XpRow(state.totalXp) } }
