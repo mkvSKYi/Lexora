@@ -1,5 +1,7 @@
 # Lexora
 
+[![CI](https://github.com/mkvSKYi/Lexora/actions/workflows/ci.yml/badge.svg)](https://github.com/mkvSKYi/Lexora/actions/workflows/ci.yml)
+
 **Read English books. Learn the words.**
 
 Lexora is an offline Android EPUB reader that turns every page into a vocabulary
