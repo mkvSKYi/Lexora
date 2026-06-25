@@ -57,12 +57,13 @@ fun WordDictionarySheet(
     state: WordLookupState,
     onSave: (term: String, translation: String) -> Unit,
     onDismiss: () -> Unit,
+    showSave: Boolean = true,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         when (state) {
             WordLookupState.Loading -> LoadingContent()
-            is WordLookupState.Entry -> EntryContent(state, onSave)
-            is WordLookupState.Machine -> MachineContent(state, onSave)
+            is WordLookupState.Entry -> EntryContent(state, onSave, showSave)
+            is WordLookupState.Machine -> MachineContent(state, onSave, showSave)
             is WordLookupState.Error -> ErrorContent(state)
         }
     }
@@ -94,6 +95,7 @@ private fun LoadingContent() {
 private fun EntryContent(
     state: WordLookupState.Entry,
     onSave: (term: String, translation: String) -> Unit,
+    showSave: Boolean,
 ) {
     val saveValue = state.translations.firstOrNull()
         ?: state.machineTranslation
@@ -192,7 +194,7 @@ private fun EntryContent(
             }
         }
 
-        if (saveValue != null) {
+        if (showSave && saveValue != null) {
             Button(onClick = { onSave(state.word, saveValue) }) {
                 Text(text = "Save")
             }
@@ -204,6 +206,7 @@ private fun EntryContent(
 private fun MachineContent(
     state: WordLookupState.Machine,
     onSave: (term: String, translation: String) -> Unit,
+    showSave: Boolean,
 ) {
     Column(
         modifier = Modifier
@@ -221,8 +224,10 @@ private fun MachineContent(
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface,
         )
-        Button(onClick = { onSave(state.word, state.translation) }) {
-            Text(text = "Save")
+        if (showSave) {
+            Button(onClick = { onSave(state.word, state.translation) }) {
+                Text(text = "Save")
+            }
         }
     }
 }
