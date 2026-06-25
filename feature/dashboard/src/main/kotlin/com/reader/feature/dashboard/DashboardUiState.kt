@@ -1,10 +1,11 @@
 package com.reader.feature.dashboard
 
-/** One cell of the activity heatmap. [level] is a 0..4 intensity bucket; future days render dim. */
+/** One cell of the activity heatmap. [level] is a 0..4 intensity bucket; [muted] days (future or
+ *  outside the displayed month) render dim. */
 data class HeatCell(
     val epochDay: Long,
     val level: Int,
-    val isFuture: Boolean,
+    val muted: Boolean,
 )
 
 data class WordStats(val total: Int, val learned: Int, val due: Int)
@@ -22,6 +23,8 @@ sealed interface DashboardUiState {
     data class Content(
         val streak: Long,
         val heatmap: List<HeatCell>,
+        val monthLabel: String,
+        val totalXp: Int,
         val words: WordStats,
         val books: BookStats,
         val hasActivity: Boolean,

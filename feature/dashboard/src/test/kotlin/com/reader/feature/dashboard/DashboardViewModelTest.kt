@@ -44,6 +44,7 @@ class DashboardViewModelTest {
         words: List<SavedWord> = emptyList(),
         books: List<BookWithProgress> = emptyList(),
         prefs: FakeDashboardPrefs = FakeDashboardPrefs(),
+        xp: Int = 0,
     ): DashboardViewModel {
         val activityRepo = mockk<ActivityRepository> {
             every { observeSince(any()) } returns flowOf(activity)
@@ -52,7 +53,10 @@ class DashboardViewModelTest {
         val libraryRepo = mockk<LibraryRepository> {
             every { observeBooksWithProgress() } returns flowOf(books)
         }
-        return DashboardViewModel(activityRepo, wordsRepo, libraryRepo, prefs, TodayProvider { today })
+        val xpRepo = mockk<com.reader.core.data.xp.XpRepository> {
+            every { observeTotalXp() } returns flowOf(xp)
+        }
+        return DashboardViewModel(activityRepo, wordsRepo, libraryRepo, xpRepo, prefs, TodayProvider { today })
     }
 
     private fun kotlinx.coroutines.test.TestScope.content(vm: DashboardViewModel): DashboardUiState.Content {
@@ -71,9 +75,10 @@ class DashboardViewModelTest {
         assertEquals(true, state.hasActivity)
     }
 
-    @Test fun heatmap_has_thirteen_weeks_of_cells() = runTest {
+    @Test fun heatmap_covers_the_current_month_in_whole_weeks() = runTest {
         val state = content(viewModel())
-        assertEquals(DashboardViewModel.HEATMAP_DAYS, state.heatmap.size)
+        assertEquals(0, state.heatmap.size % 7) // week-aligned grid
+        assertEquals(true, state.heatmap.isNotEmpty())
         assertEquals(false, state.hasActivity)
         assertEquals(0L, state.streak)
     }

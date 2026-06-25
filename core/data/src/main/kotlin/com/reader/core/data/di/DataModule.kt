@@ -11,6 +11,8 @@ import com.reader.core.data.activity.DashboardPreferencesRepository
 import com.reader.core.data.activity.DataStoreDashboardPreferencesRepository
 import com.reader.core.data.activity.DefaultActivityRepository
 import com.reader.core.data.activity.TodayProvider
+import com.reader.core.data.xp.DataStoreXpRepository
+import com.reader.core.data.xp.XpRepository
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -42,6 +44,10 @@ abstract class DataModule {
     abstract fun bindDashboardPreferencesRepository(
         impl: DataStoreDashboardPreferencesRepository,
     ): DashboardPreferencesRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindXpRepository(impl: DataStoreXpRepository): XpRepository
 
     companion object {
         @Provides

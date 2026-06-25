@@ -54,7 +54,7 @@ class ReviewSessionScreenTest {
     }
 
     private fun viewModel(repo: FakeRepo): ReviewSessionViewModel {
-        val vm = ReviewSessionViewModel(repo)
+        val vm = ReviewSessionViewModel(repo, FakeXpRepository())
         // Drain the init {} coroutine so the StateFlow has settled before we render.
         scope.advanceUntilIdle()
         return vm

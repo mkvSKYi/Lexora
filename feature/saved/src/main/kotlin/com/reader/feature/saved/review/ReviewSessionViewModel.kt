@@ -7,6 +7,8 @@ import com.reader.core.data.model.SavedWord
 import com.reader.core.data.review.ReviewGrade
 import com.reader.core.data.review.ReviewScheduler
 import com.reader.core.data.review.ReviewState
+import com.reader.core.data.xp.LexoraXp
+import com.reader.core.data.xp.XpRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,6 +21,7 @@ private const val SESSION_LIMIT = 20
 @HiltViewModel
 class ReviewSessionViewModel @Inject constructor(
     private val repo: SavedWordsRepository,
+    private val xpRepository: XpRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<ReviewSessionUiState>(ReviewSessionUiState.Loading)
@@ -48,9 +51,15 @@ class ReviewSessionViewModel @Inject constructor(
         val current = queue.firstOrNull() ?: return
         viewModelScope.launch {
             val updated = repo.applyReview(current, grade, now())
-            if (updated.learned && !current.learned) learned++
+            val graduated = updated.learned && !current.learned
+            if (graduated) learned++
             queue.removeFirst()
-            if (grade == ReviewGrade.AGAIN) queue.addLast(updated) else reviewed++
+            if (grade == ReviewGrade.AGAIN) {
+                queue.addLast(updated)
+            } else {
+                reviewed++
+                xpRepository.addXp(LexoraXp.XP_PER_REVIEW + if (graduated) LexoraXp.XP_LEARN_BONUS else 0)
+            }
             emit()
         }
     }

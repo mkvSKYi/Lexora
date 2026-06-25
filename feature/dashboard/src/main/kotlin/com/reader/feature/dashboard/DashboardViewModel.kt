@@ -11,7 +11,10 @@ import com.reader.core.data.activity.TodayProvider
 import com.reader.core.data.model.BookWithProgress
 import com.reader.core.data.model.DailyActivity
 import com.reader.core.data.model.SavedWord
+import com.reader.core.data.xp.XpRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.format.TextStyle
+import java.util.Locale
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -28,14 +31,21 @@ class DashboardViewModel @Inject constructor(
     activityRepository: ActivityRepository,
     savedWordsRepository: SavedWordsRepository,
     libraryRepository: LibraryRepository,
+    xpRepository: XpRepository,
     private val dashboardPreferences: DashboardPreferencesRepository,
     private val today: TodayProvider,
 ) : ViewModel() {
 
-    private val windowStart: Long = run {
-        val now = today.epochDay()
-        val mondayOfThisWeek = now - (LocalDate.ofEpochDay(now).dayOfWeek.value - 1)
-        mondayOfThisWeek - (HEATMAP_WEEKS - 1) * 7L
+    // The heatmap shows the CURRENT calendar month, week-aligned (Mon..Sun), so leading/trailing
+    // days from neighbouring months render muted.
+    private val monthDate = LocalDate.ofEpochDay(today.epochDay())
+    private val heatmapStart: Long = monthDate.withDayOfMonth(1)
+        .let { it.minusDays((it.dayOfWeek.value - 1).toLong()) }.toEpochDay()
+    private val heatmapDays: Int = run {
+        val firstOfMonth = monthDate.withDayOfMonth(1)
+        val lastOfMonth = firstOfMonth.plusMonths(1).minusDays(1)
+        val gridEnd = lastOfMonth.plusDays((7 - lastOfMonth.dayOfWeek.value).toLong())
+        (gridEnd.toEpochDay() - heatmapStart + 1).toInt()
     }
 
     private val _celebrateStreak = MutableSharedFlow<Long>(extraBufferCapacity = 1)
@@ -44,16 +54,17 @@ class DashboardViewModel @Inject constructor(
     val celebrateStreak: SharedFlow<Long> = _celebrateStreak.asSharedFlow()
 
     val state: StateFlow<DashboardUiState> = combine(
-        activityRepository.observeSince(windowStart),
+        activityRepository.observeSince(heatmapStart),
         savedWordsRepository.observe(),
         libraryRepository.observeBooksWithProgress(),
-    ) { activity, words, books ->
-        buildContent(activity, words, books)
+        xpRepository.observeTotalXp(),
+    ) { activity, words, books, totalXp ->
+        buildContent(activity, words, books, totalXp)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardUiState.Loading)
 
     init {
         viewModelScope.launch {
-            activityRepository.observeSince(windowStart).collect { activity ->
+            activityRepository.observeSince(heatmapStart).collect { activity ->
                 val t = today.epochDay()
                 val todayActive = activity.any { it.epochDay == t && it.isActive }
                 if (todayActive && dashboardPreferences.lastCelebratedDay() < t) {
@@ -69,20 +80,25 @@ class DashboardViewModel @Inject constructor(
         activity: List<DailyActivity>,
         words: List<SavedWord>,
         books: List<BookWithProgress>,
+        totalXp: Int,
     ): DashboardUiState.Content {
         val now = today.epochDay()
+        val nowMonth = LocalDate.ofEpochDay(now).monthValue
         val byDay = activity.associateBy { it.epochDay }
         val activeDays = activity.filter { it.isActive }.map { it.epochDay }.toSet()
 
-        val heatmap = (0 until HEATMAP_DAYS).map { offset ->
-            val day = windowStart + offset
-            HeatCell(epochDay = day, level = bucket(byDay[day]?.total ?: 0), isFuture = day > now)
+        val heatmap = (0 until heatmapDays).map { offset ->
+            val day = heatmapStart + offset
+            val muted = day > now || LocalDate.ofEpochDay(day).monthValue != nowMonth
+            HeatCell(epochDay = day, level = bucket(byDay[day]?.total ?: 0), muted = muted)
         }
 
         val nowMillis = System.currentTimeMillis()
         return DashboardUiState.Content(
             streak = StreakCalculator.currentStreak(activeDays, now),
             heatmap = heatmap,
+            monthLabel = monthDate.month.getDisplayName(TextStyle.FULL, Locale.ENGLISH).uppercase(Locale.ENGLISH),
+            totalXp = totalXp,
             words = WordStats(
                 total = words.size,
                 learned = words.count { it.learned },
@@ -107,8 +123,6 @@ class DashboardViewModel @Inject constructor(
     }
 
     companion object {
-        const val HEATMAP_WEEKS = 13
-        const val HEATMAP_DAYS = HEATMAP_WEEKS * 7
         const val FINISHED_THRESHOLD = 0.99
         const val DAILY_GOAL = 5
     }

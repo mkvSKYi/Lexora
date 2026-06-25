@@ -29,7 +29,9 @@ class DashboardScreenTest {
         dailyGoal: Int = 5,
     ) = DashboardUiState.Content(
         streak = streak,
-        heatmap = (0 until DashboardViewModel.HEATMAP_DAYS).map { HeatCell(it.toLong(), 0, isFuture = false) },
+        heatmap = (0 until 42).map { HeatCell(it.toLong(), 0, muted = false) },
+        monthLabel = "JUNE",
+        totalXp = 0,
         words = words,
         books = books,
         hasActivity = hasActivity,
@@ -47,7 +49,7 @@ class DashboardScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("Today").assertIsDisplayed()
+        composeRule.onNodeWithText("Your progress").assertIsDisplayed()
         composeRule.onNodeWithText("5").assertIsDisplayed()
         composeRule.onNodeWithText("day streak").assertIsDisplayed()
         composeRule.onNodeWithText("12").assertIsDisplayed()
@@ -91,7 +93,7 @@ class DashboardScreenTest {
         }
         composeRule.onNodeWithText("DAILY GOAL").assertIsDisplayed()
         composeRule.onNodeWithText("2/5").assertIsDisplayed()
-        composeRule.onNodeWithText("3 more to go").assertIsDisplayed()
+        composeRule.onNodeWithText("3 more words to go").assertIsDisplayed()
     }
 
     @Test fun daily_goal_card_announces_completion() {

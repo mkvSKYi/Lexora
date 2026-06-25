@@ -62,6 +62,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.reader.core.designsystem.components.AuroraButton
 import com.reader.core.designsystem.components.DailyGoalRing
+import com.reader.core.designsystem.components.XpBar
+import com.reader.core.data.xp.LexoraXp
 import com.reader.core.designsystem.mascot.LexoraMascot
 import com.reader.core.designsystem.mascot.MascotMood
 import com.reader.core.designsystem.motion.AnimatedCount
@@ -141,7 +143,8 @@ fun DashboardContent(
                     contentPadding = PaddingValues(top = 24.dp, bottom = 28.dp),
                 ) {
                     item { AppearOnce(delayMillis = 0) { Header(mascotMood) } }
-                    item { AppearOnce(delayMillis = 70) { StreakHero(state) } }
+                    item { AppearOnce(delayMillis = 50) { XpRow(state.totalXp) } }
+                    item { AppearOnce(delayMillis = 90) { StreakHero(state) } }
                     item { AppearOnce(delayMillis = 0) { DailyGoalCard(state) } }
                     item { AppearOnce(delayMillis = 0) { VocabularyCard(state.words, onStartReview) } }
                     item { AppearOnce(delayMillis = 0) { BooksCard(state.books) } }
@@ -160,24 +163,27 @@ private fun Header(mascotMood: MascotMood) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         LexoraMascot(
             mood = mascotMood,
-            modifier = Modifier.size(72.dp),
+            modifier = Modifier.size(76.dp),
         )
         Spacer(Modifier.width(12.dp))
-        Column {
-            Text(
-                text = "YOUR PROGRESS",
-                color = AuroraAccent,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 2.sp,
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = "Today",
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
-            )
-        }
+        Text(
+            text = "Your progress",
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+@Composable
+private fun XpRow(totalXp: Int) {
+    val info = LexoraXp.levelInfo(totalXp)
+    GradientCard {
+        XpBar(
+            level = info.level,
+            progress = info.progress,
+            xpIntoLevel = info.xpIntoLevel,
+            xpForLevel = info.xpForLevel,
+        )
     }
 }
 
@@ -245,21 +251,22 @@ private fun StreakHero(state: DashboardUiState.Content) {
                     }
                 }
             }
-            Spacer(Modifier.height(20.dp))
-            HeatmapGrid(state.heatmap)
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(18.dp))
             Row(
-                Modifier.fillMaxWidth(),
+                Modifier.fillMaxWidth().padding(bottom = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "Last 13 weeks",
-                    color = Color.White.copy(alpha = 0.7f),
-                    fontSize = 11.sp,
+                    text = state.monthLabel,
+                    color = Color.White,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.5.sp,
                 )
                 HeatmapLegend()
             }
+            HeatmapGrid(state.heatmap)
         }
     }
 }
@@ -271,48 +278,22 @@ private fun HeatmapGrid(cells: List<HeatCell>) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val columns = weeks.size.coerceAtLeast(1)
         val cell = (maxWidth - gap * (columns - 1)) / columns
-        Column {
-            // Month labels: the abbreviation appears over the first week-column of each month,
-            // so the grid reads as a real calendar instead of anonymous squares.
-            Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
-                var lastMonth = -1
-                weeks.forEach { week ->
-                    val date = java.time.LocalDate.ofEpochDay(week.first().epochDay)
-                    val label = if (date.monthValue != lastMonth) {
-                        date.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.ENGLISH)
-                    } else {
-                        ""
-                    }
-                    lastMonth = date.monthValue
-                    Text(
-                        text = label,
-                        color = Color.White.copy(alpha = 0.7f),
-                        fontSize = 9.sp,
-                        maxLines = 1,
-                        softWrap = false,
-                        overflow = TextOverflow.Visible,
-                        modifier = Modifier.width(cell),
+        Canvas(
+            Modifier
+                .fillMaxWidth()
+                .height(cell * 7 + gap * 6),
+        ) {
+            val gapPx = gap.toPx()
+            val cellPx = cell.toPx()
+            val radius = CornerRadius(cellPx * 0.3f, cellPx * 0.3f)
+            weeks.forEachIndexed { col, week ->
+                week.forEachIndexed { row, c ->
+                    drawRoundRect(
+                        color = heatCellColor(c),
+                        topLeft = Offset(col * (cellPx + gapPx), row * (cellPx + gapPx)),
+                        size = Size(cellPx, cellPx),
+                        cornerRadius = radius,
                     )
-                }
-            }
-            Spacer(Modifier.height(4.dp))
-            Canvas(
-                Modifier
-                    .fillMaxWidth()
-                    .height(cell * 7 + gap * 6),
-            ) {
-                val gapPx = gap.toPx()
-                val cellPx = cell.toPx()
-                val radius = CornerRadius(cellPx * 0.3f, cellPx * 0.3f)
-                weeks.forEachIndexed { col, week ->
-                    week.forEachIndexed { row, c ->
-                        drawRoundRect(
-                            color = heatCellColor(c),
-                            topLeft = Offset(col * (cellPx + gapPx), row * (cellPx + gapPx)),
-                            size = Size(cellPx, cellPx),
-                            cornerRadius = radius,
-                        )
-                    }
                 }
             }
         }
@@ -321,7 +302,7 @@ private fun HeatmapGrid(cells: List<HeatCell>) {
 
 /** Cells sit on the purple gradient, so they shade from translucent-white up to solid white. */
 private fun heatCellColor(cell: HeatCell): Color = when {
-    cell.isFuture -> Color.White.copy(alpha = 0.05f)
+    cell.muted -> Color.White.copy(alpha = 0.05f)
     cell.level == 0 -> Color.White.copy(alpha = 0.14f)
     cell.level == 1 -> Color.White.copy(alpha = 0.40f)
     cell.level == 2 -> Color.White.copy(alpha = 0.60f)
@@ -372,7 +353,7 @@ private fun DailyGoalCard(state: DashboardUiState.Content) {
                     text = if (state.goalReached) {
                         "Goal complete!"
                     } else {
-                        "${state.dailyGoal - state.todayActions} more to go"
+                        "${state.dailyGoal - state.todayActions} more words to go"
                     },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,

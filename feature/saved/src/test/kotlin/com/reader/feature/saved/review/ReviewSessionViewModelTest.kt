@@ -37,7 +37,7 @@ class ReviewSessionViewModelTest {
     @After fun teardown() = Dispatchers.resetMain()
 
     @Test fun loads_due_words_into_reviewing_state() = runTest {
-        val vm = ReviewSessionViewModel(FakeRepo(listOf(word(1), word(2))))
+        val vm = ReviewSessionViewModel(FakeRepo(listOf(word(1), word(2))), FakeXpRepository())
         advanceUntilIdle()
         val s = vm.state.value
         assertTrue(s is ReviewSessionUiState.Reviewing)
@@ -45,7 +45,7 @@ class ReviewSessionViewModelTest {
     }
 
     @Test fun good_advances_to_next_then_summary() = runTest {
-        val vm = ReviewSessionViewModel(FakeRepo(listOf(word(1), word(2))))
+        val vm = ReviewSessionViewModel(FakeRepo(listOf(word(1), word(2))), FakeXpRepository())
         advanceUntilIdle()
         vm.reveal(); vm.grade(ReviewGrade.GOOD); advanceUntilIdle()
         vm.reveal(); vm.grade(ReviewGrade.GOOD); advanceUntilIdle()
@@ -55,7 +55,7 @@ class ReviewSessionViewModelTest {
     }
 
     @Test fun again_requeues_card() = runTest {
-        val vm = ReviewSessionViewModel(FakeRepo(listOf(word(1))))
+        val vm = ReviewSessionViewModel(FakeRepo(listOf(word(1))), FakeXpRepository())
         advanceUntilIdle()
         vm.reveal(); vm.grade(ReviewGrade.AGAIN); advanceUntilIdle()
         // still reviewing — the card came back
@@ -65,8 +65,16 @@ class ReviewSessionViewModelTest {
     }
 
     @Test fun empty_due_shows_empty() = runTest {
-        val vm = ReviewSessionViewModel(FakeRepo(emptyList()))
+        val vm = ReviewSessionViewModel(FakeRepo(emptyList()), FakeXpRepository())
         advanceUntilIdle()
         assertTrue(vm.state.value is ReviewSessionUiState.Empty)
+    }
+
+    @Test fun grading_a_card_grants_xp() = runTest {
+        val xp = FakeXpRepository()
+        val vm = ReviewSessionViewModel(FakeRepo(listOf(word(1), word(2))), xp)
+        advanceUntilIdle()
+        vm.reveal(); vm.grade(ReviewGrade.GOOD); advanceUntilIdle()
+        assertEquals(com.reader.core.data.xp.LexoraXp.XP_PER_REVIEW, xp.total)
     }
 }
