@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -78,6 +79,11 @@ private val THEME_SWATCHES = listOf(
     ThemeSwatch(ReaderThemePreset.SEPIA, "Sepia", ComposeColor(0xFFFAF4E8), ComposeColor(0xFF5B4636)),
     ThemeSwatch(ReaderThemePreset.DARK, "Dark", ComposeColor(0xFF1E1E1E), ComposeColor(0xFFE0E0E0)),
     ThemeSwatch(ReaderThemePreset.AMOLED, "AMOLED", ComposeColor(0xFF000000), ComposeColor(0xFFFFFFFF)),
+    ThemeSwatch(ReaderThemePreset.PAPER, "Paper", ComposeColor(0xFFF5EFE0), ComposeColor(0xFF2B2620)),
+    ThemeSwatch(ReaderThemePreset.NORD, "Nord", ComposeColor(0xFF2E3440), ComposeColor(0xFFECEFF4)),
+    ThemeSwatch(ReaderThemePreset.SOLARIZED_DARK, "Solarized", ComposeColor(0xFF002B36), ComposeColor(0xFF93A1A1)),
+    ThemeSwatch(ReaderThemePreset.GRUVBOX, "Gruvbox", ComposeColor(0xFF282828), ComposeColor(0xFFEBDBB2)),
+    ThemeSwatch(ReaderThemePreset.DUSK, "Dusk", ComposeColor(0xFF20232E), ComposeColor(0xFFC8CCDA)),
 )
 
 /**
@@ -166,7 +172,9 @@ private fun ThemeRow(prefs: EpubPreferences, onPrefsChange: (EpubPreferences) ->
     val active = EpubPreferencesMapper.presetOf(prefs)
     SectionLabel("Theme")
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         THEME_SWATCHES.forEach { swatch ->
