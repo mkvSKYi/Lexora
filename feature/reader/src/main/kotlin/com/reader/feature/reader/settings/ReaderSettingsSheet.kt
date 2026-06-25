@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -78,6 +79,11 @@ private val THEME_SWATCHES = listOf(
     ThemeSwatch(ReaderThemePreset.SEPIA, "Sepia", ComposeColor(0xFFFAF4E8), ComposeColor(0xFF5B4636)),
     ThemeSwatch(ReaderThemePreset.DARK, "Dark", ComposeColor(0xFF1E1E1E), ComposeColor(0xFFE0E0E0)),
     ThemeSwatch(ReaderThemePreset.AMOLED, "AMOLED", ComposeColor(0xFF000000), ComposeColor(0xFFFFFFFF)),
+    ThemeSwatch(ReaderThemePreset.PAPER, "Paper", ComposeColor(0xFFF5EFE0), ComposeColor(0xFF2B2620)),
+    ThemeSwatch(ReaderThemePreset.NORD, "Nord", ComposeColor(0xFF2E3440), ComposeColor(0xFFECEFF4)),
+    ThemeSwatch(ReaderThemePreset.SOLARIZED_DARK, "Solarized", ComposeColor(0xFF002B36), ComposeColor(0xFF93A1A1)),
+    ThemeSwatch(ReaderThemePreset.GRUVBOX, "Gruvbox", ComposeColor(0xFF282828), ComposeColor(0xFFEBDBB2)),
+    ThemeSwatch(ReaderThemePreset.DUSK, "Dusk", ComposeColor(0xFF20232E), ComposeColor(0xFFC8CCDA)),
 )
 
 /**
@@ -166,7 +172,9 @@ private fun ThemeRow(prefs: EpubPreferences, onPrefsChange: (EpubPreferences) ->
     val active = EpubPreferencesMapper.presetOf(prefs)
     SectionLabel("Theme")
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         THEME_SWATCHES.forEach { swatch ->
@@ -254,19 +262,36 @@ private fun FontFamilyRow(prefs: EpubPreferences, onPrefsChange: (EpubPreference
     val current = prefs.fontFamily
     SectionLabel("Font")
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         FontChip("Default", null, current, prefs, onPrefsChange, ComposeFontFamily.Default)
         FontChip("Serif", FontFamily.SERIF, current, prefs, onPrefsChange, ComposeFontFamily.Serif)
+        FontChip("Sans", FontFamily.SANS_SERIF, current, prefs, onPrefsChange, ComposeFontFamily.SansSerif)
+        // Bundled premium fonts — names must match the navigator's font declarations. Each chip
+        // previews its label in the real bundled typeface.
+        FontChip("Literata", FontFamily("Literata"), current, prefs, onPrefsChange, assetFont("fonts/Literata.ttf"))
+        FontChip("Lora", FontFamily("Lora"), current, prefs, onPrefsChange, assetFont("fonts/Lora.ttf"))
         FontChip(
-            "Sans",
-            FontFamily.SANS_SERIF,
-            current,
-            prefs,
-            onPrefsChange,
-            ComposeFontFamily.SansSerif,
+            "Atkinson", FontFamily("Atkinson Hyperlegible"), current, prefs, onPrefsChange,
+            assetFont("fonts/AtkinsonHyperlegible-Regular.ttf"),
         )
+        FontChip("Inter", FontFamily("Inter"), current, prefs, onPrefsChange, assetFont("fonts/Inter.ttf"))
+        FontChip(
+            "Dyslexic", FontFamily.OPEN_DYSLEXIC, current, prefs, onPrefsChange,
+            assetFont("fonts/OpenDyslexic-Regular.otf"),
+        )
+    }
+}
+
+/** Loads a bundled asset font into a Compose [ComposeFontFamily] for chip previews. */
+@Composable
+private fun assetFont(path: String): ComposeFontFamily {
+    val assets = androidx.compose.ui.platform.LocalContext.current.assets
+    return androidx.compose.runtime.remember(path) {
+        ComposeFontFamily(androidx.compose.ui.text.font.Font(path = path, assetManager = assets))
     }
 }
 

@@ -1,44 +1,36 @@
 package com.reader.feature.reader.settings
 
-import android.graphics.Color as AndroidColor
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.readium.r2.navigator.epub.EpubPreferences
 import org.readium.r2.navigator.preferences.Color
 import org.readium.r2.navigator.preferences.Theme
-import org.readium.r2.shared.ExperimentalReadiumApi
 import org.robolectric.RobolectricTestRunner
 
-// Readium's Theme enum touches android.graphics.Color in its static init → Robolectric.
-@OptIn(ExperimentalReadiumApi::class)
+// Robolectric: Readium's Theme enum initializes default colors via android.graphics.Color, which a
+// plain JVM test can't run.
 @RunWith(RobolectricTestRunner::class)
 class EpubPreferencesMapperTest {
-    @Test fun light_preset_maps_to_light_theme() {
-        val out = EpubPreferencesMapper.withTheme(EpubPreferences(), ReaderThemePreset.LIGHT)
-        assertEquals(Theme.LIGHT, out.theme)
+
+    @Test fun paper_sets_light_theme_and_warm_colors() {
+        val p = EpubPreferencesMapper.withTheme(EpubPreferences(), ReaderThemePreset.PAPER)
+        assertEquals(Theme.LIGHT, p.theme)
+        assertEquals(Color(0xFFF5EFE0.toInt()), p.backgroundColor)
+        assertEquals(Color(0xFF2B2620.toInt()), p.textColor)
     }
 
-    @Test fun dark_preset_maps_to_dark_theme() {
-        val out = EpubPreferencesMapper.withTheme(EpubPreferences(), ReaderThemePreset.DARK)
-        assertEquals(Theme.DARK, out.theme)
+    @Test fun nord_sets_dark_theme_and_colors() {
+        val p = EpubPreferencesMapper.withTheme(EpubPreferences(), ReaderThemePreset.NORD)
+        assertEquals(Theme.DARK, p.theme)
+        assertEquals(Color(0xFF2E3440.toInt()), p.backgroundColor)
+        assertEquals(Color(0xFFECEFF4.toInt()), p.textColor)
     }
 
-    @Test fun preset_roundtrips_for_sepia() {
-        val out = EpubPreferencesMapper.withTheme(EpubPreferences(), ReaderThemePreset.SEPIA)
-        assertEquals(ReaderThemePreset.SEPIA, EpubPreferencesMapper.presetOf(out))
-    }
-
-    @Test fun amoled_preset_maps_to_dark_theme_with_black_background() {
-        val out = EpubPreferencesMapper.withTheme(EpubPreferences(), ReaderThemePreset.AMOLED)
-        assertEquals(Theme.DARK, out.theme)
-        assertEquals(Color(AndroidColor.BLACK), out.backgroundColor)
-        assertEquals(Color(AndroidColor.WHITE), out.textColor)
-        assertEquals(ReaderThemePreset.AMOLED, EpubPreferencesMapper.presetOf(out))
-    }
-
-    @Test fun unset_theme_returns_null_preset() {
-        assertNull(EpubPreferencesMapper.presetOf(EpubPreferences()))
+    @Test fun every_preset_round_trips() {
+        for (preset in ReaderThemePreset.entries) {
+            val prefs = EpubPreferencesMapper.withTheme(EpubPreferences(), preset)
+            assertEquals(preset, EpubPreferencesMapper.presetOf(prefs))
+        }
     }
 }

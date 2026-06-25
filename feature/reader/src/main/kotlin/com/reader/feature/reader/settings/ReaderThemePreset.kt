@@ -11,4 +11,9 @@ enum class ReaderThemePreset {
     SEPIA,
     DARK,
     AMOLED,
+    PAPER,
+    NORD,
+    SOLARIZED_DARK,
+    GRUVBOX,
+    DUSK,
 }

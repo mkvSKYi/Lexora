@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.StateFlow
 import org.json.JSONObject
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.navigator.epub.EpubPreferences
+import org.readium.r2.navigator.preferences.FontFamily
+import org.readium.r2.navigator.epub.css.FontWeight
 import org.readium.r2.navigator.input.InputListener
 import org.readium.r2.navigator.input.KeyEvent
 import org.readium.r2.navigator.input.TapEvent
@@ -58,12 +60,44 @@ class EpubReaderFragment : Fragment(), EpubNavigatorFragment.Listener {
         childFragmentManager.fragmentFactory = session.navigatorFactory.createFragmentFactory(
             initialLocator = session.initialLocator,
             listener = this,
-            configuration = EpubNavigatorFragment.Configuration(
+            configuration = EpubNavigatorFragment.Configuration {
                 // Sentence translation is driven by our own long-press → JS pipeline, so the
                 // native WebView text-selection toolbar must never appear. A no-op ActionMode
                 // callback suppresses it (we also inject CSS user-select:none per resource).
-                selectionActionModeCallback = NoOpActionModeCallback,
-            ),
+                selectionActionModeCallback = NoOpActionModeCallback
+
+                // Bundle premium reading fonts (assets/fonts/*) and expose them to readium-css.
+                servedAssets = listOf("fonts/.*")
+                addFontFamilyDeclaration(FontFamily("Literata"), alternates = listOf(FontFamily.SERIF)) {
+                    addFontFace { addSource("fonts/Literata.ttf"); setFontWeight(100..900) }
+                }
+                addFontFamilyDeclaration(FontFamily("Lora"), alternates = listOf(FontFamily.SERIF)) {
+                    addFontFace { addSource("fonts/Lora.ttf"); setFontWeight(100..900) }
+                }
+                addFontFamilyDeclaration(FontFamily("Inter"), alternates = listOf(FontFamily.SANS_SERIF)) {
+                    addFontFace { addSource("fonts/Inter.ttf"); setFontWeight(100..900) }
+                }
+                addFontFamilyDeclaration(
+                    FontFamily("Atkinson Hyperlegible"),
+                    alternates = listOf(FontFamily.SANS_SERIF),
+                ) {
+                    addFontFace { addSource("fonts/AtkinsonHyperlegible-Regular.ttf") }
+                    addFontFace {
+                        addSource("fonts/AtkinsonHyperlegible-Bold.ttf")
+                        setFontWeight(FontWeight.BOLD)
+                    }
+                }
+                addFontFamilyDeclaration(
+                    FontFamily.OPEN_DYSLEXIC,
+                    alternates = listOf(FontFamily.SANS_SERIF),
+                ) {
+                    addFontFace { addSource("fonts/OpenDyslexic-Regular.otf") }
+                    addFontFace {
+                        addSource("fonts/OpenDyslexic-Bold.otf")
+                        setFontWeight(FontWeight.BOLD)
+                    }
+                }
+            },
         )
         super.onCreate(savedInstanceState)
     }

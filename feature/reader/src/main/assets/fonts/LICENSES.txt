@@ -1,0 +1,9 @@
+Bundled reading fonts and their licenses (all permit embedding/redistribution):
+
+- Literata — SIL Open Font License 1.1. © Google.
+- Lora — SIL Open Font License 1.1. © Cyreal.
+- Inter — SIL Open Font License 1.1. © The Inter Project Authors.
+- Atkinson Hyperlegible — SIL Open Font License 1.1. © 2020 Braille Institute of America, Inc.
+- OpenDyslexic — SIL Open Font License 1.1. © Abbie Gonzalez.
+
+Full OFL text: https://openfontlicense.org/open-font-license-official-text/
