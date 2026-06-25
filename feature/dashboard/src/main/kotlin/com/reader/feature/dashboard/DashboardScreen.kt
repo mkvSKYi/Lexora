@@ -33,7 +33,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,10 +54,13 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.reader.core.designsystem.motion.AnimatedCount
 import com.reader.core.designsystem.motion.AppearOnce
+import com.reader.core.designsystem.motion.Confetti
 import com.reader.core.designsystem.motion.pulse
 import com.reader.core.designsystem.theme.AuroraAccent
 import com.reader.core.designsystem.theme.AuroraAccentSoft
@@ -66,7 +74,20 @@ fun DashboardScreen(
     viewModel: DashboardViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    DashboardContent(state = state, onStartReview = onStartReview, modifier = modifier)
+    val haptic = LocalHapticFeedback.current
+    var celebrateKey by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) {
+        viewModel.celebrateStreak.collect {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            celebrateKey++
+        }
+    }
+    DashboardContent(
+        state = state,
+        onStartReview = onStartReview,
+        celebrateKey = celebrateKey,
+        modifier = modifier,
+    )
 }
 
 @Composable
@@ -74,6 +95,7 @@ fun DashboardContent(
     state: DashboardUiState,
     onStartReview: () -> Unit,
     modifier: Modifier = Modifier,
+    celebrateKey: Int = 0,
 ) {
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         // Aurora glow bleeding down from the top, the same signature the library uses.
@@ -108,6 +130,10 @@ fun DashboardContent(
                     item { AppearOnce(delayMillis = 180) { VocabularyCard(state.words, onStartReview) } }
                     item { AppearOnce(delayMillis = 270) { BooksCard(state.books) } }
                 }
+            }
+
+            if (celebrateKey > 0) {
+                key(celebrateKey) { Confetti(modifier = Modifier.fillMaxSize()) }
             }
         }
     }

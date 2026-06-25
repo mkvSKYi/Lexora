@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -32,10 +33,17 @@ class DashboardViewModelTest {
 
     @After fun tearDown() = Dispatchers.resetMain()
 
+    private class FakeDashboardPrefs(var day: Long = Long.MIN_VALUE) :
+        com.reader.core.data.activity.DashboardPreferencesRepository {
+        override suspend fun lastCelebratedDay(): Long = day
+        override suspend fun setLastCelebratedDay(day: Long) { this.day = day }
+    }
+
     private fun viewModel(
         activity: List<DailyActivity> = emptyList(),
         words: List<SavedWord> = emptyList(),
         books: List<BookWithProgress> = emptyList(),
+        prefs: FakeDashboardPrefs = FakeDashboardPrefs(),
     ): DashboardViewModel {
         val activityRepo = mockk<ActivityRepository> {
             every { observeSince(any()) } returns flowOf(activity)
@@ -44,7 +52,7 @@ class DashboardViewModelTest {
         val libraryRepo = mockk<LibraryRepository> {
             every { observeBooksWithProgress() } returns flowOf(books)
         }
-        return DashboardViewModel(activityRepo, wordsRepo, libraryRepo, TodayProvider { today })
+        return DashboardViewModel(activityRepo, wordsRepo, libraryRepo, prefs, TodayProvider { today })
     }
 
     private fun kotlinx.coroutines.test.TestScope.content(vm: DashboardViewModel): DashboardUiState.Content {
@@ -93,6 +101,33 @@ class DashboardViewModelTest {
         val state = content(viewModel(books = books))
         assertEquals(2, state.books.inProgress)
         assertEquals(2, state.books.finished)
+    }
+
+    @Test fun celebrates_streak_once_when_today_first_becomes_active() = runTest {
+        val prefs = FakeDashboardPrefs()
+        val activity = listOf(DailyActivity(today, readingActive = true, wordsSaved = 0, wordsReviewed = 0))
+        val celebrations = mutableListOf<Long>()
+        val vm = viewModel(activity = activity, prefs = prefs)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            vm.celebrateStreak.collect { celebrations.add(it) }
+        }
+        advanceUntilIdle()
+
+        assertEquals(listOf(1L), celebrations) // streak of 1 celebrated
+        assertEquals(today, prefs.day)         // and remembered, so it won't repeat today
+    }
+
+    @Test fun does_not_celebrate_when_already_celebrated_today() = runTest {
+        val prefs = FakeDashboardPrefs(day = today)
+        val activity = listOf(DailyActivity(today, readingActive = true, wordsSaved = 0, wordsReviewed = 0))
+        val celebrations = mutableListOf<Long>()
+        val vm = viewModel(activity = activity, prefs = prefs)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            vm.celebrateStreak.collect { celebrations.add(it) }
+        }
+        advanceUntilIdle()
+
+        assertEquals(emptyList<Long>(), celebrations)
     }
 
     private fun word(id: Long, learned: Boolean, dueAt: Long) =
