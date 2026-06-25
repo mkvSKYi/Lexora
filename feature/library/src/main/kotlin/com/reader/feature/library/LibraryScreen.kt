@@ -232,11 +232,18 @@ private fun LibraryHeader(bookCount: Int, onOpenSaved: () -> Unit) {
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            Text(
-                text = if (bookCount == 1) "1 book" else "$bookCount books",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row {
+                com.reader.core.designsystem.motion.AnimatedCount(
+                    target = bookCount,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = if (bookCount == 1) " book" else " books",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
         IconButton(onClick = onOpenSaved) {
             Icon(Icons.Filled.Bookmarks, contentDescription = "Saved words", tint = AuroraAccent)

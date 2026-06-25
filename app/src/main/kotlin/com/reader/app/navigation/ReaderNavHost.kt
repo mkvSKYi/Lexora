@@ -1,5 +1,9 @@
 package com.reader.app.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmarks
@@ -101,6 +105,12 @@ private fun MainTabs(
             navController = tabsNav,
             startDestination = TODAY_ROUTE,
             modifier = Modifier.padding(innerPadding),
+            // Fade-through between tabs: the outgoing screen fades out while the incoming one
+            // fades + scales up softly. Keeps tab switches feeling intentional, not instant.
+            enterTransition = { fadeIn(tween(220)) + scaleIn(tween(220), initialScale = 0.96f) },
+            exitTransition = { fadeOut(tween(150)) },
+            popEnterTransition = { fadeIn(tween(220)) + scaleIn(tween(220), initialScale = 0.96f) },
+            popExitTransition = { fadeOut(tween(150)) },
         ) {
             composable(TODAY_ROUTE) {
                 DashboardScreen(onStartReview = onStartReview)
