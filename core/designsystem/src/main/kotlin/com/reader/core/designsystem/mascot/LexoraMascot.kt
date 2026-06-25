@@ -27,10 +27,10 @@ import com.reader.core.designsystem.theme.AuroraDeep
 enum class MascotMood { IDLE, HAPPY, READING, SLEEPY }
 
 private val PageCream = Color(0xFFFDF6E9)
-private val PageShade = Color(0xFFE9DEC6)
-private val InkBrown = Color(0xFF3A2E4D)
+private val PageShade = Color(0xFFD9CCAF)
+private val InkBrown = Color(0xFF402A1B)
 private val Cheek = Color(0xFFFF8FB1)
-private val Ribbon = Color(0xFFFFC15E)
+private val Ribbon = Color(0xFFEF5F4C)
 
 /**
  * "Lexi" — Lexora's book-creature mascot, drawn and animated entirely in Compose. It breathes and
@@ -87,98 +87,101 @@ fun LexoraMascot(
 }
 
 private fun DrawScope.drawBookCreature(cx: Float, s: Float, mood: MascotMood, blink: Float) {
-    val bottomY = s * 0.86f
-    val hw = s * 0.42f
-    val humpY = s * 0.16f
-    val valleyY = s * 0.30f
+    val bookW = s * 0.60f
+    val bookH = s * 0.70f
+    val left = cx - bookW / 2f
+    val top = s * 0.13f
+    val bottom = top + bookH
+    val right = left + bookW
+    val rad = s * 0.10f
 
     // Soft contact shadow.
     drawOval(
         color = Color.Black.copy(alpha = 0.16f),
-        topLeft = Offset(cx - hw * 0.75f, bottomY + s * 0.02f),
-        size = Size(hw * 1.5f, s * 0.07f),
+        topLeft = Offset(cx - bookW * 0.44f, bottom + s * 0.01f),
+        size = Size(bookW * 0.88f, s * 0.06f),
     )
 
-    // Little feet.
-    val footW = s * 0.12f
-    val footH = s * 0.06f
+    // Little feet poking out the bottom.
+    val footW = s * 0.13f
+    val footH = s * 0.07f
     listOf(-1f, 1f).forEach { side ->
         drawRoundRectCompat(
             color = AuroraDeep,
-            left = cx + side * s * 0.16f - footW / 2f,
-            top = bottomY - footH * 0.4f,
+            left = cx + side * s * 0.15f - footW / 2f,
+            top = bottom - footH * 0.45f,
             width = footW,
             height = footH,
             radius = footH / 2f,
         )
     }
 
-    // Book body: two top "page" humps with a central spine valley.
-    val body = Path().apply {
-        moveTo(cx, bottomY)
-        cubicTo(cx - hw * 0.55f, bottomY + s * 0.02f, cx - hw, bottomY - s * 0.18f, cx - hw, s * 0.52f)
-        cubicTo(cx - hw, humpY + s * 0.04f, cx - hw * 0.78f, humpY, cx - hw * 0.40f, humpY + s * 0.02f)
-        cubicTo(cx - hw * 0.18f, humpY + s * 0.04f, cx - hw * 0.06f, valleyY - s * 0.02f, cx, valleyY)
-        cubicTo(cx + hw * 0.06f, valleyY - s * 0.02f, cx + hw * 0.18f, humpY + s * 0.04f, cx + hw * 0.40f, humpY + s * 0.02f)
-        cubicTo(cx + hw * 0.78f, humpY, cx + hw, humpY + s * 0.04f, cx + hw, s * 0.52f)
-        cubicTo(cx + hw, bottomY - s * 0.18f, cx + hw * 0.55f, bottomY + s * 0.02f, cx, bottomY)
-        close()
-    }
-    drawPath(
-        path = body,
-        brush = Brush.verticalGradient(
-            colors = listOf(AuroraAccent, AuroraAccentSoft, AuroraDeep),
-            startY = humpY,
-            endY = bottomY,
-        ),
+    // Page block peeking out the right edge (drawn first, so the cover overlaps its left side).
+    val pageW = s * 0.10f
+    drawRoundRectCompat(
+        color = PageCream,
+        left = right - pageW,
+        top = top + s * 0.03f,
+        width = pageW,
+        height = bookH - s * 0.06f,
+        radius = s * 0.03f,
     )
-
-    // Page faces (cream) inset on each side of the spine — the "open book" read.
-    val pageInset = s * 0.07f
-    listOf(-1f, 1f).forEach { side ->
-        val page = Path().apply {
-            moveTo(cx + side * pageInset * 0.4f, valleyY + s * 0.02f)
-            cubicTo(
-                cx + side * hw * 0.2f, humpY + s * 0.10f,
-                cx + side * hw * 0.62f, humpY + s * 0.08f,
-                cx + side * (hw - pageInset), s * 0.50f,
-            )
-            cubicTo(
-                cx + side * (hw - pageInset), bottomY - s * 0.22f,
-                cx + side * hw * 0.5f, bottomY - s * 0.10f,
-                cx + side * pageInset * 0.4f, bottomY - s * 0.08f,
-            )
-            close()
-        }
-        drawPath(page, color = if (side < 0) PageCream else PageShade)
+    listOf(0.22f, 0.40f, 0.58f, 0.76f).forEach { fr ->
+        drawLine(
+            color = PageShade,
+            start = Offset(right - pageW + s * 0.012f, top + bookH * fr),
+            end = Offset(right - s * 0.018f, top + bookH * fr),
+            strokeWidth = s * 0.009f,
+            cap = StrokeCap.Round,
+        )
     }
 
-    // Spine.
-    drawLine(
-        color = AuroraDeep,
-        start = Offset(cx, valleyY + s * 0.01f),
-        end = Offset(cx, bottomY - s * 0.06f),
-        strokeWidth = s * 0.03f,
-        cap = StrokeCap.Round,
-    )
-
-    // Bookmark ribbon peeking from the top valley.
+    // Bookmark ribbon hanging from the top.
+    val bx = right - s * 0.22f
+    val ribW = s * 0.08f
     val ribbon = Path().apply {
-        moveTo(cx - s * 0.05f, valleyY - s * 0.02f)
-        lineTo(cx + s * 0.05f, valleyY - s * 0.02f)
-        lineTo(cx + s * 0.05f, valleyY + s * 0.14f)
-        lineTo(cx, valleyY + s * 0.08f)
-        lineTo(cx - s * 0.05f, valleyY + s * 0.14f)
+        moveTo(bx, top - s * 0.05f)
+        lineTo(bx + ribW, top - s * 0.05f)
+        lineTo(bx + ribW, top + s * 0.15f)
+        lineTo(bx + ribW / 2f, top + s * 0.09f)
+        lineTo(bx, top + s * 0.15f)
         close()
     }
     drawPath(ribbon, color = Ribbon)
 
-    // Face.
-    val eyeY = s * 0.46f
-    val eyeDX = s * 0.155f
-    val eyeR = s * 0.058f
+    // Book cover (amber), slightly narrower so the page block stays visible on the right.
+    val coverW = bookW - pageW * 0.55f
+    drawRoundRect(
+        brush = Brush.verticalGradient(listOf(AuroraAccent, AuroraAccentSoft, AuroraDeep), startY = top, endY = bottom),
+        topLeft = Offset(left, top),
+        size = Size(coverW, bookH),
+        cornerRadius = androidx.compose.ui.geometry.CornerRadius(rad, rad),
+    )
+
+    // Spine binding on the left edge: a darker band + groove line.
+    drawRoundRectCompat(
+        color = AuroraDeep,
+        left = left,
+        top = top,
+        width = s * 0.10f,
+        height = bookH,
+        radius = rad,
+    )
+    drawLine(
+        color = AuroraDeep,
+        start = Offset(left + s * 0.115f, top + s * 0.05f),
+        end = Offset(left + s * 0.115f, bottom - s * 0.05f),
+        strokeWidth = s * 0.012f,
+        cap = StrokeCap.Round,
+    )
+
+    // Face, centred on the amber cover (between spine and pages).
+    val faceCx = left + s * 0.10f + (coverW - s * 0.10f) / 2f
+    val eyeY = top + bookH * 0.42f
+    val eyeDX = s * 0.115f
+    val eyeR = s * 0.055f
     listOf(-1f, 1f).forEach { side ->
-        val ex = cx + side * eyeDX
+        val ex = faceCx + side * eyeDX
         when (mood) {
             MascotMood.HAPPY -> drawArc( // ^_^ happy eyes
                 color = InkBrown,
@@ -221,7 +224,7 @@ private fun DrawScope.drawBookCreature(cx: Float, s: Float, mood: MascotMood, bl
         drawCircle(
             color = Cheek.copy(alpha = 0.55f),
             radius = s * 0.035f,
-            center = Offset(cx + side * s * 0.24f, eyeY + s * 0.05f),
+            center = Offset(faceCx + side * s * 0.175f, eyeY + s * 0.055f),
         )
     }
 
@@ -230,19 +233,19 @@ private fun DrawScope.drawBookCreature(cx: Float, s: Float, mood: MascotMood, bl
     when (mood) {
         MascotMood.HAPPY -> {
             val mouth = Path().apply {
-                moveTo(cx - s * 0.05f, mouthY)
-                quadraticBezierTo(cx, mouthY + s * 0.08f, cx + s * 0.05f, mouthY)
+                moveTo(faceCx - s * 0.05f, mouthY)
+                quadraticBezierTo(faceCx, mouthY + s * 0.08f, faceCx + s * 0.05f, mouthY)
                 close()
             }
             drawPath(mouth, color = InkBrown)
         }
-        MascotMood.SLEEPY -> drawCircle(InkBrown.copy(alpha = 0.6f), radius = s * 0.012f, center = Offset(cx, mouthY))
+        MascotMood.SLEEPY -> drawCircle(InkBrown.copy(alpha = 0.6f), radius = s * 0.012f, center = Offset(faceCx, mouthY))
         else -> drawArc(
             color = InkBrown,
             startAngle = 20f,
             sweepAngle = 140f,
             useCenter = false,
-            topLeft = Offset(cx - s * 0.05f, mouthY - s * 0.04f),
+            topLeft = Offset(faceCx - s * 0.05f, mouthY - s * 0.04f),
             size = Size(s * 0.10f, s * 0.07f),
             style = Stroke(width = s * 0.02f, cap = StrokeCap.Round),
         )
@@ -250,8 +253,8 @@ private fun DrawScope.drawBookCreature(cx: Float, s: Float, mood: MascotMood, bl
 
     // A few "Z"s when sleepy.
     if (mood == MascotMood.SLEEPY) {
-        drawZ(Offset(cx + hw * 0.7f, valleyY), s * 0.06f)
-        drawZ(Offset(cx + hw * 0.95f, valleyY - s * 0.12f), s * 0.085f)
+        drawZ(Offset(right + s * 0.00f, top - s * 0.02f), s * 0.06f)
+        drawZ(Offset(right + s * 0.09f, top - s * 0.14f), s * 0.085f)
     }
 }
 
