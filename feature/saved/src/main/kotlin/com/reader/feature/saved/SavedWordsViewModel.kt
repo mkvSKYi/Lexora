@@ -32,6 +32,7 @@ class SavedWordsViewModel @Inject constructor(
                 words = visible,
                 learnedCount = words.count { it.learned },
                 totalCount = words.size,
+                dueCount = words.count { !it.learned && it.dueAt <= System.currentTimeMillis() },
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SavedWordsUiState.Loading)
 
