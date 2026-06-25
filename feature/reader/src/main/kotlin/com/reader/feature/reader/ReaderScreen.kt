@@ -238,7 +238,8 @@ fun ReaderScreen(
             }
 
             // Always-on thin reading-progress hairline at the very bottom edge. Drawn before the
-            // chrome bottom bar (which covers it when chrome is visible).
+            // chrome bottom bar (which covers it when chrome is visible). A faint full-width track
+            // makes the accent fill read as a progress bar rather than a stray mark at low progress.
             LinearProgressIndicator(
                 progress = { currentProgression.coerceIn(0f, 1f) },
                 modifier = Modifier
@@ -246,7 +247,9 @@ fun ReaderScreen(
                     .fillMaxWidth()
                     .height(2.dp),
                 color = AURORA_ACCENT,
-                trackColor = Color.Transparent,
+                trackColor = AURORA_ACCENT.copy(alpha = 0.16f),
+                gapSize = 0.dp,
+                drawStopIndicator = {},
             )
 
             // Brightness gesture: a thin strip at the very RIGHT EDGE (in the page margin) that
