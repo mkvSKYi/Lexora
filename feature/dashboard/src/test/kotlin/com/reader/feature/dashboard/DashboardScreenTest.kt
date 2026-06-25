@@ -12,8 +12,10 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
+@Config(qualifiers = "w411dp-h2400dp")
 class DashboardScreenTest {
 
     @get:Rule val composeRule = createComposeRule()
@@ -45,7 +47,7 @@ class DashboardScreenTest {
         composeRule.onNodeWithText("5").assertIsDisplayed()
         composeRule.onNodeWithText("day streak").assertIsDisplayed()
         composeRule.onNodeWithText("12").assertIsDisplayed()
-        composeRule.onNodeWithText("Review 3").assertIsDisplayed()
+        composeRule.onNodeWithText("Review 3 now").assertIsDisplayed()
     }
 
     @Test fun review_button_enabled_and_fires_when_words_are_due() {
@@ -59,8 +61,8 @@ class DashboardScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("Review 2").assertIsEnabled()
-        composeRule.onNodeWithText("Review 2").performClick()
+        composeRule.onNodeWithText("Review 2 now").assertIsEnabled()
+        composeRule.onNodeWithText("Review 2 now").performClick()
         assertEquals(true, reviewed)
     }
 
@@ -84,6 +86,6 @@ class DashboardScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("Start reading to build your streak").assertIsDisplayed()
+        composeRule.onNodeWithText("Start your streak").assertIsDisplayed()
     }
 }
