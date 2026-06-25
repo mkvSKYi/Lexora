@@ -53,6 +53,7 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -140,10 +141,10 @@ fun DashboardContent(
                     contentPadding = PaddingValues(top = 24.dp, bottom = 28.dp),
                 ) {
                     item { AppearOnce(delayMillis = 0) { Header(mascotMood) } }
-                    item { AppearOnce(delayMillis = 90) { StreakHero(state) } }
-                    item { AppearOnce(delayMillis = 160) { DailyGoalCard(state) } }
-                    item { AppearOnce(delayMillis = 230) { VocabularyCard(state.words, onStartReview) } }
-                    item { AppearOnce(delayMillis = 300) { BooksCard(state.books) } }
+                    item { AppearOnce(delayMillis = 70) { StreakHero(state) } }
+                    item { AppearOnce(delayMillis = 0) { DailyGoalCard(state) } }
+                    item { AppearOnce(delayMillis = 0) { VocabularyCard(state.words, onStartReview) } }
+                    item { AppearOnce(delayMillis = 0) { BooksCard(state.books) } }
                 }
             }
 
@@ -270,22 +271,48 @@ private fun HeatmapGrid(cells: List<HeatCell>) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val columns = weeks.size.coerceAtLeast(1)
         val cell = (maxWidth - gap * (columns - 1)) / columns
-        Canvas(
-            Modifier
-                .fillMaxWidth()
-                .height(cell * 7 + gap * 6),
-        ) {
-            val gapPx = gap.toPx()
-            val cellPx = cell.toPx()
-            val radius = CornerRadius(cellPx * 0.3f, cellPx * 0.3f)
-            weeks.forEachIndexed { col, week ->
-                week.forEachIndexed { row, c ->
-                    drawRoundRect(
-                        color = heatCellColor(c),
-                        topLeft = Offset(col * (cellPx + gapPx), row * (cellPx + gapPx)),
-                        size = Size(cellPx, cellPx),
-                        cornerRadius = radius,
+        Column {
+            // Month labels: the abbreviation appears over the first week-column of each month,
+            // so the grid reads as a real calendar instead of anonymous squares.
+            Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                var lastMonth = -1
+                weeks.forEach { week ->
+                    val date = java.time.LocalDate.ofEpochDay(week.first().epochDay)
+                    val label = if (date.monthValue != lastMonth) {
+                        date.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.ENGLISH)
+                    } else {
+                        ""
+                    }
+                    lastMonth = date.monthValue
+                    Text(
+                        text = label,
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 9.sp,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Visible,
+                        modifier = Modifier.width(cell),
                     )
+                }
+            }
+            Spacer(Modifier.height(4.dp))
+            Canvas(
+                Modifier
+                    .fillMaxWidth()
+                    .height(cell * 7 + gap * 6),
+            ) {
+                val gapPx = gap.toPx()
+                val cellPx = cell.toPx()
+                val radius = CornerRadius(cellPx * 0.3f, cellPx * 0.3f)
+                weeks.forEachIndexed { col, week ->
+                    week.forEachIndexed { row, c ->
+                        drawRoundRect(
+                            color = heatCellColor(c),
+                            topLeft = Offset(col * (cellPx + gapPx), row * (cellPx + gapPx)),
+                            size = Size(cellPx, cellPx),
+                            cornerRadius = radius,
+                        )
+                    }
                 }
             }
         }

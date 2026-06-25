@@ -60,10 +60,10 @@ fun AppearOnce(
 ) {
     var shown by remember { mutableStateOf(false) }
     LaunchedEffectShown(delayMillis) { shown = true }
-    val alpha by animateFloatAsState(if (shown) 1f else 0f, tween(380), label = "appearAlpha")
+    val alpha by animateFloatAsState(if (shown) 1f else 0f, tween(200), label = "appearAlpha")
     val offsetY by animateDpAsState(
-        targetValue = if (shown) 0.dp else 18.dp,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        targetValue = if (shown) 0.dp else 12.dp,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMedium),
         label = "appearOffset",
     )
     Box(modifier.offset(y = offsetY).alpha(alpha)) { content() }
