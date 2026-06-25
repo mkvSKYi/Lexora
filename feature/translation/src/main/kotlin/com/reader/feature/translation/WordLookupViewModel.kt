@@ -3,6 +3,7 @@ package com.reader.feature.translation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.reader.core.dictionary.DictionaryRepository
+import com.reader.feature.translation.tts.TtsSpeaker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,10 +15,17 @@ import javax.inject.Inject
 class WordLookupViewModel @Inject constructor(
     private val dictionary: DictionaryRepository,
     private val engine: TranslationEngine,
+    private val tts: TtsSpeaker,
 ) : ViewModel() {
 
     private val _lookupState = MutableStateFlow<WordLookupState?>(null)
     val lookupState: StateFlow<WordLookupState?> = _lookupState.asStateFlow()
+
+    /** True when an English TTS voice is available; gates the speaker button. */
+    val ttsAvailable: StateFlow<Boolean> = tts.available
+
+    /** Speaks the English [word] aloud. */
+    fun speak(word: String) = tts.speak(word)
 
     fun onWord(word: String) {
         val w = word.trim()

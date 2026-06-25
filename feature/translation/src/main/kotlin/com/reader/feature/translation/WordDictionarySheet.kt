@@ -11,9 +11,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -61,12 +65,14 @@ fun WordDictionarySheet(
     onSave: (term: String, translation: String) -> Unit,
     onDismiss: () -> Unit,
     showSave: Boolean = true,
+    canSpeak: Boolean = false,
+    onSpeak: (String) -> Unit = {},
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         when (state) {
             WordLookupState.Loading -> LoadingContent()
-            is WordLookupState.Entry -> EntryContent(state, onSave, showSave)
-            is WordLookupState.Machine -> MachineContent(state, onSave, showSave)
+            is WordLookupState.Entry -> EntryContent(state, onSave, showSave, canSpeak, onSpeak)
+            is WordLookupState.Machine -> MachineContent(state, onSave, showSave, canSpeak, onSpeak)
             is WordLookupState.Error -> ErrorContent(state)
         }
     }
@@ -99,6 +105,8 @@ private fun EntryContent(
     state: WordLookupState.Entry,
     onSave: (term: String, translation: String) -> Unit,
     showSave: Boolean,
+    canSpeak: Boolean,
+    onSpeak: (String) -> Unit,
 ) {
     val saveValue = state.translations.firstOrNull()
         ?: state.machineTranslation
@@ -110,12 +118,20 @@ private fun EntryContent(
             .padding(horizontal = SHEET_HORIZONTAL_PADDING, vertical = SHEET_VERTICAL_PADDING),
         verticalArrangement = Arrangement.spacedBy(SECTION_SPACING),
     ) {
-        Text(
-            text = state.word,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = state.word,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            if (canSpeak) {
+                IconButton(onClick = { onSpeak(state.word) }) {
+                    Icon(Icons.Filled.VolumeUp, contentDescription = "Pronounce")
+                }
+            }
+        }
 
         if (state.ipa != null || state.partOfSpeech != null) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -210,6 +226,8 @@ private fun MachineContent(
     state: WordLookupState.Machine,
     onSave: (term: String, translation: String) -> Unit,
     showSave: Boolean,
+    canSpeak: Boolean,
+    onSpeak: (String) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -217,11 +235,19 @@ private fun MachineContent(
             .padding(horizontal = SHEET_HORIZONTAL_PADDING, vertical = SHEET_VERTICAL_PADDING),
         verticalArrangement = Arrangement.spacedBy(SECTION_SPACING),
     ) {
-        Text(
-            text = state.word,
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = state.word,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            if (canSpeak) {
+                IconButton(onClick = { onSpeak(state.word) }) {
+                    Icon(Icons.Filled.VolumeUp, contentDescription = "Pronounce")
+                }
+            }
+        }
         Text(
             text = state.translation,
             style = MaterialTheme.typography.bodyLarge,

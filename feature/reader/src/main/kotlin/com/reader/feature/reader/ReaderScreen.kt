@@ -304,6 +304,7 @@ private fun EpubReader(
     // Dictionary lookup for single-word taps, rendered in a modal bottom sheet.
     val wordVm: WordLookupViewModel = hiltViewModel()
     val wordState by wordVm.lookupState.collectAsStateWithLifecycle()
+    val canSpeak by wordVm.ttsAvailable.collectAsStateWithLifecycle()
 
     // Anchor for the popover: the tapped word's bounds in navigator-view pixels.
     var anchorRect by remember { mutableStateOf<RectF?>(null) }
@@ -442,6 +443,8 @@ private fun EpubReader(
                     wordVm.dismiss()
                 },
                 onDismiss = { wordVm.dismiss() },
+                canSpeak = canSpeak,
+                onSpeak = wordVm::speak,
             )
         }
     }

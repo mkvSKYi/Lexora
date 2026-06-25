@@ -69,6 +69,7 @@ fun SavedWordsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val filter by viewModel.filter.collectAsStateWithLifecycle()
     val wordState by wordVm.lookupState.collectAsStateWithLifecycle()
+    val canSpeak by wordVm.ttsAvailable.collectAsStateWithLifecycle()
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         // Aurora glow behind the header.
@@ -155,6 +156,8 @@ fun SavedWordsScreen(
             onSave = { _, _ -> },
             onDismiss = { wordVm.dismiss() },
             showSave = false,
+            canSpeak = canSpeak,
+            onSpeak = wordVm::speak,
         )
     }
 }
