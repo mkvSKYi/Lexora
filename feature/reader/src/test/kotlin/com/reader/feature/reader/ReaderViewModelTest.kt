@@ -169,4 +169,71 @@ class ReaderViewModelTest {
         mediaType = org.readium.r2.shared.util.mediatype.MediaType.XHTML,
         locations = Locator.Locations(totalProgression = progression),
     )
+
+    /** A locator with an explicit within-resource [progression] (what bookmark matching uses). */
+    private fun locatorWithin(href: String, progression: Double, total: Double) = Locator(
+        href = org.readium.r2.shared.util.Url(href)!!,
+        mediaType = org.readium.r2.shared.util.mediatype.MediaType.XHTML,
+        locations = Locator.Locations(progression = progression, totalProgression = total),
+    )
+
+    private fun bookmark(id: Long, href: String, progression: Double) =
+        com.reader.core.data.model.Bookmark(
+            id = id, bookId = 3L, locatorJson = "{}", href = href, progression = progression,
+            totalProgression = 0.25, chapterTitle = null, createdAt = 0L,
+        )
+
+    @Test fun toggleBookmark_adds_when_none_matches() = runTest {
+        io.mockk.every { bookmarks.observe(3L) } returns kotlinx.coroutines.flow.flowOf(emptyList())
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords, bookmarks)
+        backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
+            vm.bookmarks.collect {}
+        }
+        vm.load(bookId = 3L)
+        vm.onLocatorChanged(bookId = 3L, locator = locatorWithin("ch1.html", 0.5, 0.25))
+        advanceUntilIdle()
+
+        vm.toggleBookmark()
+        advanceUntilIdle()
+
+        coVerify {
+            bookmarks.add(
+                match<com.reader.core.data.model.Bookmark> {
+                    it.bookId == 3L && it.href == "ch1.html" && it.progression == 0.5
+                },
+            )
+        }
+    }
+
+    @Test fun toggleBookmark_deletes_when_one_matches() = runTest {
+        io.mockk.every { bookmarks.observe(3L) } returns
+            kotlinx.coroutines.flow.flowOf(listOf(bookmark(id = 9L, href = "ch1.html", progression = 0.5)))
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords, bookmarks)
+        backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
+            vm.bookmarks.collect {}
+        }
+        vm.load(bookId = 3L)
+        // within epsilon (0.02) of the stored 0.5
+        vm.onLocatorChanged(bookId = 3L, locator = locatorWithin("ch1.html", 0.51, 0.25))
+        advanceUntilIdle()
+
+        vm.toggleBookmark()
+        advanceUntilIdle()
+
+        coVerify { bookmarks.delete(9L) }
+    }
+
+    @Test fun isCurrentBookmarked_reflects_match() = runTest {
+        io.mockk.every { bookmarks.observe(3L) } returns
+            kotlinx.coroutines.flow.flowOf(listOf(bookmark(id = 9L, href = "ch1.html", progression = 0.5)))
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords, bookmarks)
+        backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
+            vm.isCurrentBookmarked.collect {}
+        }
+        vm.load(bookId = 3L)
+        vm.onLocatorChanged(bookId = 3L, locator = locatorWithin("ch1.html", 0.5, 0.25))
+        advanceUntilIdle()
+
+        assertEquals(true, vm.isCurrentBookmarked.value)
+    }
 }
