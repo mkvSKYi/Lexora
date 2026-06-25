@@ -13,8 +13,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -37,11 +38,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -50,15 +57,17 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.reader.core.data.model.SavedWord
+import com.reader.core.designsystem.motion.AnimatedCount
+import com.reader.core.designsystem.motion.AppearOnce
+import com.reader.core.designsystem.motion.Confetti
+import com.reader.core.designsystem.theme.AuroraAccent
 import com.reader.feature.translation.WordDictionarySheet
 import com.reader.feature.translation.WordLookupViewModel
 import java.text.DateFormat
 import java.util.Date
 
-private val Accent = Color(0xFF9B8CFF)
 private val LearnedGreen = Color(0xFF34C759)
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SavedWordsScreen(
     onBack: () -> Unit,
@@ -71,84 +80,27 @@ fun SavedWordsScreen(
     val wordState by wordVm.lookupState.collectAsStateWithLifecycle()
     val canSpeak by wordVm.ttsAvailable.collectAsStateWithLifecycle()
 
-    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        // Aurora glow behind the header.
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(320.dp)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Accent.copy(alpha = 0.22f),
-                            Accent.copy(alpha = 0.06f),
-                            Color.Transparent,
-                        ),
-                    ),
-                ),
-        )
+    val haptic = LocalHapticFeedback.current
+    // Bumped each time a word graduates to "learned" so the confetti replays as a reward.
+    var celebrateKey by remember { mutableIntStateOf(0) }
 
-        when (val state = uiState) {
-            is SavedWordsUiState.Loading ->
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Accent)
-                }
-
-            is SavedWordsUiState.Content ->
-                if (state.totalCount == 0) {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        Header(onBack = onBack)
-                        EmptySavedWords(modifier = Modifier.fillMaxSize())
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            start = 20.dp,
-                            end = 20.dp,
-                            bottom = 24.dp,
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        item { Header(onBack = onBack) }
-                        if (state.dueCount > 0) {
-                            item {
-                                ReviewEntryCard(
-                                    dueCount = state.dueCount,
-                                    onClick = onStartReview,
-                                )
-                            }
-                        }
-                        item {
-                            StatsCard(
-                                learnedCount = state.learnedCount,
-                                totalCount = state.totalCount,
-                            )
-                        }
-                        item {
-                            FilterChips(
-                                filter = filter,
-                                onSelect = viewModel::setFilter,
-                            )
-                        }
-                        if (state.words.isEmpty()) {
-                            item { NothingHereRow() }
-                        } else {
-                            items(items = state.words, key = { it.id }) { word ->
-                                SavedWordCard(
-                                    word = word,
-                                    onTap = { wordVm.onWord(word.term) },
-                                    onToggleLearned = { learned ->
-                                        viewModel.toggleLearned(word.id, learned)
-                                    },
-                                    onDelete = { viewModel.delete(word.id) },
-                                )
-                            }
-                        }
-                    }
-                }
-        }
-    }
+    SavedWordsContent(
+        uiState = uiState,
+        filter = filter,
+        celebrateKey = celebrateKey,
+        onBack = onBack,
+        onStartReview = onStartReview,
+        onWordTap = { wordVm.onWord(it.term) },
+        onSetFilter = viewModel::setFilter,
+        onToggleLearned = { id, learned ->
+            viewModel.toggleLearned(id, learned)
+            if (learned) {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                celebrateKey++
+            }
+        },
+        onDelete = viewModel::delete,
+    )
 
     wordState?.let { state ->
         WordDictionarySheet(
@@ -159,6 +111,91 @@ fun SavedWordsScreen(
             canSpeak = canSpeak,
             onSpeak = wordVm::speak,
         )
+    }
+}
+
+@Composable
+fun SavedWordsContent(
+    uiState: SavedWordsUiState,
+    filter: SavedWordsFilter,
+    celebrateKey: Int,
+    onBack: () -> Unit,
+    onStartReview: () -> Unit,
+    onWordTap: (SavedWord) -> Unit,
+    onSetFilter: (SavedWordsFilter) -> Unit,
+    onToggleLearned: (Long, Boolean) -> Unit,
+    onDelete: (Long) -> Unit,
+) {
+    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        // Aurora glow behind the header.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(320.dp)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            AuroraAccent.copy(alpha = 0.22f),
+                            AuroraAccent.copy(alpha = 0.06f),
+                            Color.Transparent,
+                        ),
+                    ),
+                ),
+        )
+
+        when (uiState) {
+            is SavedWordsUiState.Loading ->
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = AuroraAccent)
+                }
+
+            is SavedWordsUiState.Content ->
+                if (uiState.totalCount == 0) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        Header(onBack = onBack)
+                        EmptySavedWords(modifier = Modifier.fillMaxSize())
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 24.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        item { Header(onBack = onBack) }
+                        if (uiState.dueCount > 0) {
+                            item {
+                                AppearOnce(delayMillis = 40) {
+                                    ReviewEntryCard(dueCount = uiState.dueCount, onClick = onStartReview)
+                                }
+                            }
+                        }
+                        item {
+                            AppearOnce(delayMillis = 90) {
+                                StatsCard(learnedCount = uiState.learnedCount, totalCount = uiState.totalCount)
+                            }
+                        }
+                        item { FilterChips(filter = filter, onSelect = onSetFilter) }
+                        if (uiState.words.isEmpty()) {
+                            item { NothingHereRow() }
+                        } else {
+                            itemsIndexed(uiState.words) { index, word ->
+                                AppearOnce(delayMillis = 140 + index * 45) {
+                                    SavedWordCard(
+                                        word = word,
+                                        onTap = { onWordTap(word) },
+                                        onToggleLearned = { learned -> onToggleLearned(word.id, learned) },
+                                        onDelete = { onDelete(word.id) },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+        }
+
+        if (celebrateKey > 0) {
+            key(celebrateKey) { Confetti(modifier = Modifier.fillMaxSize()) }
+        }
     }
 }
 
@@ -178,7 +215,6 @@ private fun Header(onBack: () -> Unit) {
         Text(
             text = "Saved Words",
             style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(start = 4.dp),
         )
@@ -190,7 +226,7 @@ private fun ReviewEntryCard(dueCount: Int, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Accent.copy(alpha = 0.22f)),
+        colors = CardDefaults.cardColors(containerColor = AuroraAccent.copy(alpha = 0.22f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
     ) {
         Row(
@@ -201,14 +237,10 @@ private fun ReviewEntryCard(dueCount: Int, onClick: () -> Unit) {
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
-                    .background(Brush.linearGradient(listOf(Accent.copy(alpha = 0.7f), Accent))),
+                    .background(Brush.linearGradient(listOf(AuroraAccent.copy(alpha = 0.7f), AuroraAccent))),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = Icons.Filled.School,
-                    contentDescription = null,
-                    tint = Color.White,
-                )
+                Icon(Icons.Filled.School, contentDescription = null, tint = Color.White)
             }
             Column(modifier = Modifier.weight(1f).padding(start = 16.dp)) {
                 Text(
@@ -217,11 +249,7 @@ private fun ReviewEntryCard(dueCount: Int, onClick: () -> Unit) {
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
-                Text(
-                    text = "$dueCount due",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Accent,
-                )
+                Text(text = "$dueCount due", style = MaterialTheme.typography.bodyMedium, color = AuroraAccent)
             }
         }
     }
@@ -236,26 +264,35 @@ private fun StatsCard(learnedCount: Int, totalCount: Int) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
     ) {
-        Column(
+        Row(
             modifier = Modifier.fillMaxWidth().padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = "$learnedCount of $totalCount learned",
-                style = MaterialTheme.typography.titleMedium,
+            AnimatedCount(
+                target = learnedCount,
+                style = MaterialTheme.typography.headlineMedium,
+                color = AuroraAccent,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
             )
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
-                color = Accent,
-                trackColor = MaterialTheme.colorScheme.surface,
-            )
+            Spacer(Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "of $totalCount learned",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
+                    color = AuroraAccent,
+                    trackColor = MaterialTheme.colorScheme.surface,
+                )
+            }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FilterChips(
     filter: SavedWordsFilter,
@@ -268,6 +305,7 @@ private fun FilterChips(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FilterEntry(
     label: String,
@@ -280,7 +318,7 @@ private fun FilterEntry(
         onClick = { onSelect(value) },
         label = { Text(label) },
         colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = Accent.copy(alpha = 0.22f),
+            selectedContainerColor = AuroraAccent.copy(alpha = 0.22f),
             selectedLabelColor = MaterialTheme.colorScheme.onSurface,
         ),
     )
@@ -309,21 +347,14 @@ private fun SavedWordCard(
             modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     text = word.term,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
-                Text(
-                    text = word.translation,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Accent,
-                )
+                Text(text = word.translation, style = MaterialTheme.typography.bodyLarge, color = AuroraAccent)
                 word.contextSentence?.let { sentence ->
                     Text(
                         text = "“$sentence”",
@@ -383,21 +414,15 @@ private fun EmptySavedWords(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .size(112.dp)
                 .clip(CircleShape)
-                .background(Brush.linearGradient(listOf(Accent.copy(alpha = 0.6f), Accent))),
+                .background(Brush.linearGradient(listOf(AuroraAccent.copy(alpha = 0.6f), AuroraAccent))),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                imageVector = Icons.Filled.Bookmark,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(48.dp),
-            )
+            Icon(Icons.Filled.Bookmark, contentDescription = null, tint = Color.White, modifier = Modifier.size(48.dp))
         }
         Spacer(Modifier.height(24.dp))
         Text(
             text = "No saved words yet",
             style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
         )
         Spacer(Modifier.height(8.dp))
