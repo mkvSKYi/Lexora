@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import com.reader.core.dictionary.DictionaryEntry
 import com.reader.core.dictionary.DictionaryRepository
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -26,29 +27,24 @@ class WordLookupViewModelTest {
     @Before fun setup() = Dispatchers.setMain(StandardTestDispatcher())
     @After fun teardown() = Dispatchers.resetMain()
 
-    @Test fun dictionary_hit_emits_entry_then_machine_translation_alongside() = runTest {
+    @Test fun dictionary_hit_with_translations_skips_ml_kit() = runTest {
         coEvery { dictionary.lookup("dog") } returns DictionaryEntry(
             "dog", "/dɒɡ/", "noun", listOf("An animal.", "An animal."), listOf("собака", "собака", "пес"),
         )
-        coEvery { engine.ensureModelsReady() } returns Result.success(Unit)
-        coEvery { engine.translate("dog") } returns Result.success("собака (авто)")
         val vm = WordLookupViewModel(dictionary, engine)
         vm.lookupState.test {
             assertNull(awaitItem())
             vm.onWord("dog")
             assertEquals(WordLookupState.Loading, awaitItem())
-            // First the dictionary entry shows immediately, with the auto translation pending.
-            val pending = awaitItem() as WordLookupState.Entry
-            assertEquals(listOf("An animal."), pending.definitions)        // deduped
-            assertEquals(listOf("собака", "пес"), pending.translations)    // deduped, order kept
-            assertTrue(pending.translationPending)
-            assertNull(pending.machineTranslation)
-            // Then the ML Kit translation arrives alongside the same entry.
-            val resolved = awaitItem() as WordLookupState.Entry
-            assertEquals("собака (авто)", resolved.machineTranslation)
-            assertEquals(false, resolved.translationPending)
-            cancelAndIgnoreRemainingEvents()
+            // The dictionary already has Ukrainian translations: one Entry, no ML Kit, no pending.
+            val entry = awaitItem() as WordLookupState.Entry
+            assertEquals(listOf("An animal."), entry.definitions)         // deduped
+            assertEquals(listOf("собака", "пес"), entry.translations)     // deduped, order kept
+            assertEquals(false, entry.translationPending)
+            assertNull(entry.machineTranslation)
+            expectNoEvents()
         }
+        coVerify(exactly = 0) { engine.translate(any()) }
     }
 
     @Test fun dictionary_hit_with_failed_translation_still_shows_entry() = runTest {

@@ -1,5 +1,6 @@
 package com.reader.feature.translation
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -34,8 +39,8 @@ private val LOADING_MIN_HEIGHT = 160.dp
 /** Vertical spacing between sections of the entry layout. */
 private val SECTION_SPACING = 12.dp
 
-/** Max number of definitions shown, so a word with dozens of senses doesn't bury the Save button. */
-private const val MAX_DEFINITIONS = 10
+/** Definitions shown before "Show more" expands the rest, so a word with many senses stays compact. */
+private const val COLLAPSED_DEFINITIONS = 5
 
 /**
  * Modal bottom sheet that renders a [WordLookupState] for a tapped word.
@@ -90,8 +95,8 @@ private fun EntryContent(
     state: WordLookupState.Entry,
     onSave: (term: String, translation: String) -> Unit,
 ) {
-    val saveValue = state.machineTranslation
-        ?: state.translations.firstOrNull()
+    val saveValue = state.translations.firstOrNull()
+        ?: state.machineTranslation
         ?: state.definitions.firstOrNull()
     Column(
         modifier = Modifier
@@ -126,52 +131,62 @@ private fun EntryContent(
             }
         }
 
-        // ML Kit translation, shown for every word alongside the dictionary article.
-        if (state.translationPending) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+        // A single Ukrainian translation: the dictionary's when present, otherwise the ML Kit one.
+        when {
+            state.translations.isNotEmpty() -> {
+                SectionLabel("Translation")
                 Text(
-                    text = "Translating…",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = state.translations.joinToString(", "),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
-        } else if (state.machineTranslation != null) {
-            Text(
-                text = state.machineTranslation,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
 
-        if (state.translations.isNotEmpty()) {
-            SectionLabel("Dictionary")
-            Text(
-                text = state.translations.joinToString(", "),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
+            state.translationPending -> {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                    Text(
+                        text = "Translating…",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            state.machineTranslation != null -> {
+                SectionLabel("Translation")
+                Text(
+                    text = state.machineTranslation,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
         }
 
         if (state.definitions.isNotEmpty()) {
+            var expanded by remember(state.word) { mutableStateOf(false) }
+            val shown = if (expanded) state.definitions else state.definitions.take(COLLAPSED_DEFINITIONS)
             SectionLabel("Definitions")
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                state.definitions.take(MAX_DEFINITIONS).forEachIndexed { index, definition ->
+                shown.forEachIndexed { index, definition ->
                     Text(
                         text = "${index + 1}. $definition",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
-                val hidden = state.definitions.size - MAX_DEFINITIONS
-                if (hidden > 0) {
+                val remaining = state.definitions.size - COLLAPSED_DEFINITIONS
+                if (remaining > 0) {
                     Text(
-                        text = "+$hidden more",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        text = if (expanded) "Show less" else "Show $remaining more",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .clickable { expanded = !expanded }
+                            .padding(vertical = 4.dp),
                     )
                 }
             }
