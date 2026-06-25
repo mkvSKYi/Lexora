@@ -4,6 +4,11 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
+/** Lexora's signature "Aurora" accent ramp — the deep-to-bright purple used for gradients + glow. */
+val AuroraDeep = Color(0xFF4A3FB0)
+val AuroraAccentSoft = Color(0xFF6D5DF6)
+val AuroraAccent = Color(0xFF9B8CFF)
+
 internal val LightColors = lightColorScheme(
     primary = Color(0xFF4C5BD4),
     onPrimary = Color(0xFFFFFFFF),

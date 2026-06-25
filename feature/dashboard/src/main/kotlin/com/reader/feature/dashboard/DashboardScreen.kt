@@ -51,10 +51,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-
-internal val AuroraAccent = Color(0xFF9B8CFF)
-internal val AuroraAccentSoft = Color(0xFF6D5DF6)
-private val AuroraDeep = Color(0xFF4A3FB0)
+import com.reader.core.designsystem.motion.AnimatedCount
+import com.reader.core.designsystem.motion.AppearOnce
+import com.reader.core.designsystem.motion.pulse
+import com.reader.core.designsystem.theme.AuroraAccent
+import com.reader.core.designsystem.theme.AuroraAccentSoft
+import com.reader.core.designsystem.theme.AuroraDeep
+import com.reader.core.designsystem.theme.Literata
 
 @Composable
 fun DashboardScreen(
@@ -100,10 +103,10 @@ fun DashboardContent(
                     verticalArrangement = Arrangement.spacedBy(20.dp),
                     contentPadding = PaddingValues(top = 24.dp, bottom = 28.dp),
                 ) {
-                    item { Header() }
-                    item { StreakHero(state) }
-                    item { VocabularyCard(state.words, onStartReview) }
-                    item { BooksCard(state.books) }
+                    item { AppearOnce(delayMillis = 0) { Header() } }
+                    item { AppearOnce(delayMillis = 90) { StreakHero(state) } }
+                    item { AppearOnce(delayMillis = 180) { VocabularyCard(state.words, onStartReview) } }
+                    item { AppearOnce(delayMillis = 270) { BooksCard(state.books) } }
                 }
             }
         }
@@ -156,19 +159,20 @@ private fun StreakHero(state: DashboardUiState.Content) {
                         Icons.Filled.LocalFireDepartment,
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier.size(26.dp),
+                        modifier = Modifier.size(26.dp).pulse(),
                     )
                 }
                 Spacer(Modifier.width(14.dp))
                 Column {
                     if (state.hasActivity) {
-                        Text(
-                            text = "${state.streak}",
-                            color = Color.White,
-                            fontSize = 44.sp,
-                            fontWeight = FontWeight.Black,
+                        AnimatedCount(
+                            target = state.streak.toInt(),
                             style = TextStyle(
-                                shadow = Shadow(Color.White.copy(alpha = 0.6f), blurRadius = 28f),
+                                fontFamily = Literata,
+                                fontSize = 46.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                shadow = Shadow(Color.White.copy(alpha = 0.55f), blurRadius = 26f),
                             ),
                         )
                         Text(
@@ -336,11 +340,11 @@ private fun Stat(icon: ImageVector, value: Int, label: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(icon, contentDescription = null, tint = AuroraAccent, modifier = Modifier.size(22.dp))
         Spacer(Modifier.height(6.dp))
-        Text(
-            text = "$value",
+        AnimatedCount(
+            target = value,
             style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Black,
             color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.Bold,
         )
         Text(
             text = label,
