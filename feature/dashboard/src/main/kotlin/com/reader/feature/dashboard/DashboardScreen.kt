@@ -308,11 +308,11 @@ private fun HeatmapGrid(cells: List<HeatCell>) {
 
 /** Cells sit on the purple gradient, so they shade from translucent-white up to solid white. */
 private fun heatCellColor(cell: HeatCell): Color = when {
-    cell.muted -> Color.White.copy(alpha = 0.05f)
-    cell.level == 0 -> Color.White.copy(alpha = 0.14f)
-    cell.level == 1 -> Color.White.copy(alpha = 0.40f)
-    cell.level == 2 -> Color.White.copy(alpha = 0.60f)
-    cell.level == 3 -> Color.White.copy(alpha = 0.80f)
+    cell.muted -> Color(0xFF231C12).copy(alpha = 0.55f) // recessed well, reads as "outside the month"
+    cell.level == 0 -> Color(0xFF231C12)                // empty in-month day: a dark warm well
+    cell.level == 1 -> Color.White.copy(alpha = 0.45f)
+    cell.level == 2 -> Color.White.copy(alpha = 0.65f)
+    cell.level == 3 -> Color.White.copy(alpha = 0.82f)
     else -> Color.White
 }
 
