@@ -60,6 +60,9 @@ fun ReaderSearchScreen(
     onResultClick: (SearchResult) -> Unit,
     onClose: () -> Unit,
 ) {
+    // System back closes the search overlay instead of falling through to the reader's back
+    // (which would navigate out of the book).
+    androidx.activity.compose.BackHandler { onClose() }
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.surface,
