@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 
-private val Accent = Color(0xFF9B8CFF)
+private val Accent = Color(0xFFFFC368)
 private val Glass = Color(0xFF15151B)
 private val BarHeight = 170.dp
 

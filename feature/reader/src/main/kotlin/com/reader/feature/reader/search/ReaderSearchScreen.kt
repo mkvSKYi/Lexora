@@ -43,7 +43,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 
 /** Aurora accent used to highlight the matched term inside each result snippet. */
-private val ACCENT = Color(0xFF9B8CFF)
+private val ACCENT = Color(0xFFFFC368)
 
 /**
  * Full-screen in-book search overlay. Pure rendering: it takes the current [state] and emits

@@ -30,8 +30,8 @@ import com.reader.core.data.model.BookWithProgress
 import kotlin.math.roundToInt
 
 /** Aurora accent used across the redesigned library. */
-internal val AuroraAccent = Color(0xFF9B8CFF)
-internal val AuroraAccentSoft = Color(0xFF6D5DF6)
+internal val AuroraAccent = Color(0xFFFFC368)
+internal val AuroraAccentSoft = Color(0xFFF0A53A)
 
 /** A wide hero card resuming the most-recently-opened book. */
 @Composable

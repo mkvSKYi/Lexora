@@ -53,7 +53,7 @@ import com.reader.core.designsystem.motion.Confetti
 import com.reader.core.designsystem.theme.AuroraAccent
 import com.reader.core.designsystem.theme.AuroraAccentSoft
 
-private val Accent = Color(0xFF9B8CFF)
+private val Accent = Color(0xFFFFC368)
 private val LearnedGreen = Color(0xFF34C759)
 private val AgainRed = Color(0xFFE5534B)
 

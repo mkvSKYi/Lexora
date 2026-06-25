@@ -30,7 +30,7 @@ import kotlin.math.roundToInt
 private val GLASS = Color(0xFF15151B).copy(alpha = 0.86f)
 
 /** Aurora accent shared with the rest of the app. */
-private val ACCENT = Color(0xFF9B8CFF)
+private val ACCENT = Color(0xFFFFC368)
 
 /**
  * Floating bottom progress bar for the reader. Shows the current chapter title and reading percent,

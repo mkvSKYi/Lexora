@@ -50,7 +50,7 @@ private val REVEAL_STRIP_HEIGHT = 56.dp
 private val GLASS = Color(0xFF15151B).copy(alpha = 0.86f)
 
 /** Aurora accent shared with the rest of the app. */
-private val ACCENT = Color(0xFF9B8CFF)
+private val ACCENT = Color(0xFFFFC368)
 
 /**
  * Auto-hiding reader chrome. Lays [content] full-screen and overlays a floating top bar

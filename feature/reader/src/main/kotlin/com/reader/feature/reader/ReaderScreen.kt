@@ -69,7 +69,7 @@ private const val MAX_WARMTH_ALPHA = 0.4f
 private val WARMTH_COLOR = Color(0xFFFF8C00)
 
 /** Aurora accent used by the reader chrome + progress hairline. */
-internal val AURORA_ACCENT = Color(0xFF9B8CFF)
+internal val AURORA_ACCENT = Color(0xFFFFC368)
 
 /** Width of the far-right edge strip that owns the brightness swipe (narrow, in the page margin). */
 private val BRIGHTNESS_EDGE_WIDTH = 40.dp
