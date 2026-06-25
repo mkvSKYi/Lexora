@@ -27,3 +27,7 @@ secrets.properties
 
 # Internal AI design docs (specs/plans/ledgers) — not part of the public repo
 docs/superpowers/
+
+# Release signing (local only)
+keystore.properties
+*.jks
