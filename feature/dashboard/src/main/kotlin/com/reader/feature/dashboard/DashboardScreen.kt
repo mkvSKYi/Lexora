@@ -58,6 +58,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.reader.core.designsystem.components.AuroraButton
 import com.reader.core.designsystem.mascot.LexoraMascot
 import com.reader.core.designsystem.mascot.MascotMood
 import com.reader.core.designsystem.motion.AnimatedCount
@@ -346,37 +347,12 @@ private fun BooksCard(books: BookStats) {
 
 @Composable
 private fun ReviewButton(due: Int, onClick: () -> Unit) {
-    val enabled = due > 0
-    Button(
+    AuroraButton(
+        text = if (due > 0) "Review $due now" else "Nothing to review",
         onClick = onClick,
-        enabled = enabled,
-        shape = RoundedCornerShape(16.dp),
-        contentPadding = PaddingValues(),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Color.Transparent,
-            disabledContainerColor = Color.White.copy(alpha = 0.08f),
-        ),
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(52.dp)
-            .then(
-                if (enabled) {
-                    Modifier.background(
-                        Brush.horizontalGradient(listOf(AuroraAccentSoft, AuroraAccent)),
-                        RoundedCornerShape(16.dp),
-                    )
-                } else {
-                    Modifier
-                },
-            ),
-    ) {
-        Text(
-            text = if (enabled) "Review $due now" else "Nothing to review",
-            color = Color.White.copy(alpha = if (enabled) 1f else 0.5f),
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleSmall,
-        )
-    }
+        enabled = due > 0,
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 @Composable

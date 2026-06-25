@@ -44,6 +44,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.reader.core.data.model.SavedWord
 import com.reader.core.data.review.ReviewGrade
+import com.reader.core.designsystem.components.AuroraButton
 import com.reader.core.designsystem.mascot.LexoraMascot
 import com.reader.core.designsystem.mascot.MascotMood
 import com.reader.core.designsystem.motion.AnimatedCount
@@ -286,22 +287,11 @@ private fun SessionCelebration(reviewed: Int, learned: Int, onDone: () -> Unit) 
                     CelebrationStat(value = learned, label = "learned")
                 }
                 Spacer(Modifier.height(34.dp))
-                Box(
-                    modifier = Modifier
-                        .height(52.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Brush.horizontalGradient(listOf(AuroraAccentSoft, AuroraAccent)))
-                        .clickable(onClick = onDone)
-                        .padding(horizontal = 44.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "Done",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                }
+                AuroraButton(
+                    text = "Done",
+                    onClick = onDone,
+                    modifier = Modifier.fillMaxWidth(0.6f),
+                )
             }
         }
         Confetti(modifier = Modifier.fillMaxSize())
