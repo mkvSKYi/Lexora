@@ -7,6 +7,8 @@ import com.reader.core.data.SavedWordsRepository
 import com.reader.core.data.model.ReadingProgress
 import com.reader.core.data.model.SavedWord
 import com.reader.core.data.preferences.ReaderPreferencesRepository
+import com.reader.feature.reader.highlight.HighlightState
+import com.reader.feature.reader.highlight.SavedWordHighlighter
 import com.reader.feature.reader.navigation.TocEntry
 import com.reader.feature.reader.navigation.TocResolver
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,10 +17,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import org.readium.r2.navigator.epub.EpubPreferences
@@ -70,6 +75,21 @@ class ReaderViewModel @Inject constructor(
     /** Warmth (amber overlay) intensity in 0f..1f; 0 = off. */
     val warmth: StateFlow<Float> = _warmth.asStateFlow()
 
+    private val _highlightEnabled = MutableStateFlow(true)
+
+    /** Whether saved-word highlighting is on (persisted; default true). */
+    val highlightEnabled: StateFlow<Boolean> = _highlightEnabled.asStateFlow()
+
+    /** Saved-word highlight state for the navigator: the not-yet-learned terms + the toggle. */
+    val highlight: StateFlow<HighlightState> =
+        combine(savedWordsRepository.observe(), _highlightEnabled) { words, enabled ->
+            HighlightState(SavedWordHighlighter.learningTerms(words), enabled)
+        }.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5_000),
+            HighlightState(emptySet(), true),
+        )
+
     private val _toc = MutableStateFlow<List<TocEntry>>(emptyList())
 
     /**
@@ -118,6 +138,7 @@ class ReaderViewModel @Inject constructor(
             _epubPreferences.value = deserialize(prefs.epubPreferencesJson)
             _brightness.value = prefs.brightness
             _warmth.value = prefs.warmth
+            _highlightEnabled.value = prefs.highlightSavedWords
         }
     }
 
@@ -131,6 +152,12 @@ class ReaderViewModel @Inject constructor(
     fun setWarmth(value: Float) {
         _warmth.value = value
         viewModelScope.launch { preferencesRepository.setWarmth(value) }
+    }
+
+    /** Toggles saved-word highlighting and persists it. */
+    fun setHighlightEnabled(value: Boolean) {
+        _highlightEnabled.value = value
+        viewModelScope.launch { preferencesRepository.setHighlightSavedWords(value) }
     }
 
     /** Updates the live preferences and persists them as Readium-serialized JSON. */
