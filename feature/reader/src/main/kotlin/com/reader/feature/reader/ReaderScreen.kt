@@ -7,13 +7,16 @@ import android.graphics.RectF
 import android.view.WindowManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.SnackbarHost
@@ -66,6 +69,9 @@ private val WARMTH_COLOR = Color(0xFFFF8C00)
 
 /** Aurora accent used by the reader chrome + progress hairline. */
 internal val AURORA_ACCENT = Color(0xFF9B8CFF)
+
+/** Width of the far-right edge strip that owns the brightness swipe (narrow, in the page margin). */
+private val BRIGHTNESS_EDGE_WIDTH = 40.dp
 
 @Composable
 fun ReaderScreen(
@@ -193,19 +199,6 @@ fun ReaderScreen(
                         viewModel.saveCurrentWord(term, translation, context)
                         snackbarScope.launch { snackbarHostState.showSnackbar("Saved") }
                     },
-                    onBrightnessDrag = { dy, h ->
-                        brightnessHideJob?.cancel()
-                        val base = brightnessIndicator ?: (brightness ?: 0.5f)
-                        val next = nextBrightness(base, dy, h)
-                        brightnessIndicator = next
-                        viewModel.setBrightness(next)
-                    },
-                    onBrightnessDragEnd = {
-                        brightnessHideJob = brightnessScope.launch {
-                            delay(600)
-                            brightnessIndicator = null
-                        }
-                    },
                 )
             }
 
@@ -236,16 +229,44 @@ fun ReaderScreen(
                 trackColor = Color.Transparent,
             )
 
-            // Right-side vertical-swipe brightness indicator. The gesture itself is detected by the
-            // navigator's InputListener.onDrag (see EpubReaderFragment) so it coexists with taps and
-            // page-turns without an overlay stealing input; here we only render the indicator.
-            brightnessIndicator?.let { level ->
-                BrightnessIndicator(
-                    level = level,
+            // Brightness gesture: a thin strip at the very RIGHT EDGE (in the page margin) that
+            // detects vertical drags. It CONSUMES the drag, so the navigator never page-turns while
+            // adjusting; being only a narrow edge strip, normal taps / reading / page swipes never
+            // hit it. detectVerticalDragGestures claims only vertical drags, so a horizontal swipe
+            // that grazes the edge still pages.
+            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                val heightPx = with(LocalDensity.current) { maxHeight.toPx() }
+                Box(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
-                        .padding(end = 16.dp),
+                        .fillMaxHeight()
+                        .width(BRIGHTNESS_EDGE_WIDTH)
+                        .pointerInput(Unit) {
+                            detectVerticalDragGestures(
+                                onVerticalDrag = { _, dragAmount ->
+                                    brightnessHideJob?.cancel()
+                                    val base = brightnessIndicator ?: (brightness ?: 0.5f)
+                                    val next = nextBrightness(base, dragAmount, heightPx)
+                                    brightnessIndicator = next
+                                    viewModel.setBrightness(next)
+                                },
+                                onDragEnd = {
+                                    brightnessHideJob = brightnessScope.launch {
+                                        delay(600)
+                                        brightnessIndicator = null
+                                    }
+                                },
+                            )
+                        },
                 )
+                brightnessIndicator?.let { level ->
+                    BrightnessIndicator(
+                        level = level,
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(end = 16.dp),
+                    )
+                }
             }
         }
     }
@@ -271,12 +292,8 @@ private fun EpubReader(
     onLocatorChanged: (Long, org.readium.r2.shared.publication.Locator) -> Unit,
     onSelection: (SelectionEvent) -> Unit,
     onSaveWord: (term: String, translation: String, contextSentence: String?) -> Unit,
-    onBrightnessDrag: (dyPx: Float, heightPx: Float) -> Unit,
-    onBrightnessDragEnd: () -> Unit,
 ) {
     val translationVm: TranslationViewModel = hiltViewModel()
-    val currentBrightnessDrag by rememberUpdatedState(onBrightnessDrag)
-    val currentBrightnessDragEnd by rememberUpdatedState(onBrightnessDragEnd)
     val popup by translationVm.popupState.collectAsStateWithLifecycle()
 
     // Dictionary lookup for single-word taps, rendered in a modal bottom sheet.
@@ -329,8 +346,6 @@ private fun EpubReader(
                     onLocatorChanged(bookId, locator)
                 },
                 onSelection = { event -> onSelectionInternal(event) },
-                onBrightnessDrag = { dy, h -> currentBrightnessDrag(dy, h) },
-                onBrightnessDragEnd = { currentBrightnessDragEnd() },
             ),
         )
     }
