@@ -36,9 +36,6 @@ import java.util.concurrent.atomic.AtomicLong
  * and passes only its id via [ARG_SESSION_ID]. The fragment looks the session up in
  * [onCreate] before installing the factory.
  */
-/** Vertical slop (px) before a right-side drag is treated as a brightness gesture. */
-private const val BRIGHTNESS_DRAG_SLOP_PX = 24f
-
 class EpubReaderFragment : Fragment(), EpubNavigatorFragment.Listener {
 
     private var session: ReaderNavigatorHost.Session? = null
@@ -217,55 +214,14 @@ class EpubReaderFragment : Fragment(), EpubNavigatorFragment.Listener {
 
     @OptIn(org.readium.r2.shared.ExperimentalReadiumApi::class)
     private val tapListener = object : InputListener {
-        /** Active once a right-side vertical drag has crossed the brightness slop this gesture. */
-        var brightnessDragging = false
-
-        /** Last seen cumulative vertical offset, to derive the incremental step. */
-        var lastDragOffsetY = 0f
-
         override fun onTap(event: TapEvent): Boolean {
             onTapResolveWord(event)
             return true // consume — do not let anything page-turn on a tap
         }
 
-        override fun onDrag(event: DragEvent): Boolean {
-            val width = view?.width ?: return false
-            val height = view?.height ?: return false
-            // Only a vertical-dominant drag that STARTED on the right half is a brightness gesture;
-            // everything else (taps, horizontal page swipes, left-side drags) is left untouched.
-            val rightSide = event.start.x > width * 0.5f
-            val verticalDominant = kotlin.math.abs(event.offset.y) > kotlin.math.abs(event.offset.x)
-            when (event.type) {
-                DragEvent.Type.Start -> {
-                    brightnessDragging = false
-                    lastDragOffsetY = 0f
-                    return false
-                }
-                DragEvent.Type.Move -> {
-                    if (!brightnessDragging && rightSide && verticalDominant &&
-                        kotlin.math.abs(event.offset.y) > BRIGHTNESS_DRAG_SLOP_PX
-                    ) {
-                        brightnessDragging = true
-                        lastDragOffsetY = event.offset.y
-                    }
-                    if (brightnessDragging) {
-                        val dy = event.offset.y - lastDragOffsetY
-                        lastDragOffsetY = event.offset.y
-                        session?.onBrightnessDrag?.invoke(dy, height.toFloat())
-                        return true // consume so the navigator ignores it
-                    }
-                    return false
-                }
-                DragEvent.Type.End -> {
-                    if (brightnessDragging) {
-                        brightnessDragging = false
-                        session?.onBrightnessDragEnd?.invoke()
-                        return true
-                    }
-                    return false
-                }
-            }
-        }
+        // The brightness gesture is handled by a Compose edge strip in ReaderScreen (which consumes
+        // the drag so the navigator never page-turns); the navigator ignores drags here.
+        override fun onDrag(event: DragEvent): Boolean = false
         override fun onKey(event: KeyEvent): Boolean = false
     }
 
@@ -403,10 +359,6 @@ object ReaderNavigatorHost {
         val epubPreferences: StateFlow<EpubPreferences>,
         val onLocatorChanged: (Locator) -> Unit,
         val onSelection: (SelectionEvent) -> Unit = {},
-        /** A right-side vertical drag step: [dyPx] is the incremental drag in px, [heightPx] the view height. */
-        val onBrightnessDrag: (dyPx: Float, heightPx: Float) -> Unit = { _, _ -> },
-        /** The right-side vertical drag ended. */
-        val onBrightnessDragEnd: () -> Unit = {},
     ) {
         /**
          * Set by [EpubReaderFragment] once its navigator is live. The screen invokes this to jump
