@@ -53,16 +53,18 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.foundation.border
 import com.reader.core.designsystem.components.AuroraButton
 import com.reader.core.designsystem.components.DailyGoalRing
 import com.reader.core.designsystem.components.XpBar
+import com.reader.core.designsystem.theme.LexHairline
 import com.reader.core.data.xp.LexoraXp
 import com.reader.core.designsystem.mascot.LexoraMascot
 import com.reader.core.designsystem.mascot.MascotMood
@@ -140,7 +142,7 @@ fun DashboardContent(
                         .statusBarsPadding()
                         .padding(horizontal = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(20.dp),
-                    contentPadding = PaddingValues(top = 24.dp, bottom = 28.dp),
+                    contentPadding = PaddingValues(top = 48.dp, bottom = 32.dp),
                 ) {
                     item { AppearOnce(delayMillis = 0) { Header(mascotMood) } }
                     item { AppearOnce(delayMillis = 50) { XpRow(state.totalXp) } }
@@ -273,26 +275,30 @@ private fun StreakHero(state: DashboardUiState.Content) {
 
 @Composable
 private fun HeatmapGrid(cells: List<HeatCell>) {
-    val weeks = cells.chunked(7)
-    val gap = 3.dp
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val columns = weeks.size.coerceAtLeast(1)
-        val cell = (maxWidth - gap * (columns - 1)) / columns
-        Canvas(
-            Modifier
-                .fillMaxWidth()
-                .height(cell * 7 + gap * 6),
-        ) {
-            val gapPx = gap.toPx()
-            val cellPx = cell.toPx()
-            val radius = CornerRadius(cellPx * 0.3f, cellPx * 0.3f)
-            weeks.forEachIndexed { col, week ->
-                week.forEachIndexed { row, c ->
-                    drawRoundRect(
-                        color = heatCellColor(c),
-                        topLeft = Offset(col * (cellPx + gapPx), row * (cellPx + gapPx)),
-                        size = Size(cellPx, cellPx),
-                        cornerRadius = radius,
+    val weeks = cells.chunked(7) // each chunk is a Mon..Sun week → a calendar row
+    val cellSize = 32.dp
+    val gap = 5.dp
+    Column(verticalArrangement = Arrangement.spacedBy(gap)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+            listOf("M", "T", "W", "T", "F", "S", "S").forEach { d ->
+                Text(
+                    text = d,
+                    color = Color.White.copy(alpha = 0.5f),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.width(cellSize),
+                )
+            }
+        }
+        weeks.forEach { week ->
+            Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                week.forEach { c ->
+                    Box(
+                        Modifier
+                            .size(cellSize)
+                            .clip(RoundedCornerShape(9.dp))
+                            .background(heatCellColor(c)),
                     )
                 }
             }
@@ -445,15 +451,9 @@ private fun GradientCard(content: @Composable androidx.compose.foundation.layout
     Box(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(26.dp))
+            .clip(RoundedCornerShape(24.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .drawBehind {
-                drawRect(
-                    Brush.linearGradient(
-                        listOf(AuroraAccentSoft.copy(alpha = 0.16f), AuroraAccent.copy(alpha = 0.03f)),
-                    ),
-                )
-            }
+            .border(1.dp, LexHairline, RoundedCornerShape(24.dp))
             .padding(20.dp),
     ) {
         Column(content = content)

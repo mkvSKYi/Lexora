@@ -14,7 +14,7 @@ import org.junit.Test
 
 class SavedWordsRepositoryTest {
     private val dao = mockk<SavedWordDao>(relaxed = true)
-    private val repo = DefaultSavedWordsRepository(dao, FakeActivityRepository())
+    private val repo = DefaultSavedWordsRepository(dao, FakeActivityRepository(), FakeXpRepository())
 
     @Test fun observe_maps_entities_to_domain() = runTest {
         coEvery { dao.observeAll() } returns flowOf(

@@ -51,6 +51,7 @@ data class LevelInfo(val level: Int, val xpIntoLevel: Int, val xpForLevel: Int) 
 
 object LexoraXp {
     const val PER_LEVEL = 100
+    const val XP_PER_SAVE = 5
     const val XP_PER_REVIEW = 10
     const val XP_LEARN_BONUS = 15
 

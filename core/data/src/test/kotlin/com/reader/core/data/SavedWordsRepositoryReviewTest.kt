@@ -14,7 +14,7 @@ import org.junit.Test
 
 class SavedWordsRepositoryReviewTest {
     private val dao = mockk<SavedWordDao>(relaxed = true)
-    private val repo = DefaultSavedWordsRepository(dao, FakeActivityRepository())
+    private val repo = DefaultSavedWordsRepository(dao, FakeActivityRepository(), FakeXpRepository())
 
     private val t = 1_000_000_000_000L
 

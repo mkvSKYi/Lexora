@@ -4,6 +4,8 @@ import com.reader.core.data.mapper.toDomain
 import com.reader.core.data.mapper.toEntity
 import com.reader.core.data.activity.ActivityRepository
 import com.reader.core.data.model.SavedWord
+import com.reader.core.data.xp.LexoraXp
+import com.reader.core.data.xp.XpRepository
 import com.reader.core.data.review.ReviewGrade
 import com.reader.core.data.review.ReviewScheduler
 import com.reader.core.data.review.ReviewState
@@ -24,13 +26,16 @@ interface SavedWordsRepository {
 class DefaultSavedWordsRepository @Inject constructor(
     private val dao: SavedWordDao,
     private val activityRepository: ActivityRepository,
+    private val xpRepository: XpRepository,
 ) : SavedWordsRepository {
     override fun observe(): Flow<List<SavedWord>> =
         dao.observeAll().map { list -> list.map { it.toDomain() } }
 
     override suspend fun save(word: SavedWord) {
+        val isNew = !dao.existsByTermAndBook(word.term, word.bookId)
         dao.upsert(word.toEntity())
         activityRepository.recordWordSaved()
+        if (isNew) xpRepository.addXp(LexoraXp.XP_PER_SAVE)
     }
     override suspend fun delete(id: Long) = dao.deleteById(id)
     override suspend fun markLearned(id: Long, learned: Boolean) = dao.updateLearned(id, learned)
