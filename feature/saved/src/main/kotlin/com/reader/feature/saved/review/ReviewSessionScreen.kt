@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -21,13 +22,19 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -37,6 +44,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.reader.core.data.model.SavedWord
 import com.reader.core.data.review.ReviewGrade
+import com.reader.core.designsystem.motion.AnimatedCount
+import com.reader.core.designsystem.motion.AppearOnce
+import com.reader.core.designsystem.motion.Confetti
+import com.reader.core.designsystem.motion.pulse
+import com.reader.core.designsystem.theme.AuroraAccent
+import com.reader.core.designsystem.theme.AuroraAccentSoft
 
 private val Accent = Color(0xFF9B8CFF)
 private val LearnedGreen = Color(0xFF34C759)
@@ -80,11 +93,7 @@ fun ReviewSessionScreen(
                 )
 
             is ReviewSessionUiState.Summary ->
-                CenteredMessage(
-                    title = "Reviewed ${s.reviewed} · ${s.learned} learned today",
-                    subtitle = null,
-                    onDone = onDone,
-                )
+                SessionCelebration(reviewed = s.reviewed, learned = s.learned, onDone = onDone)
 
             is ReviewSessionUiState.Reviewing ->
                 ReviewingContent(
@@ -242,6 +251,88 @@ private fun GradeButton(
                 color = Color.White.copy(alpha = 0.85f),
             )
         }
+    }
+}
+
+/** The dopamine payoff: a trophy, rolling-up counts, a soft haptic, and a confetti rain. */
+@Composable
+private fun SessionCelebration(reviewed: Int, learned: Int, onDone: () -> Unit) {
+    val haptic = LocalHapticFeedback.current
+    LaunchedEffect(Unit) { haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        AppearOnce(modifier = Modifier.align(Alignment.Center)) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(104.dp)
+                        .clip(CircleShape)
+                        .background(Brush.linearGradient(listOf(AuroraAccentSoft, AuroraAccent))),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Filled.EmojiEvents,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(54.dp).pulse(max = 1.08f),
+                    )
+                }
+                Spacer(Modifier.height(22.dp))
+                Text(
+                    text = "Nice work!",
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = "Session complete",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(28.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(40.dp)) {
+                    CelebrationStat(value = reviewed, label = "reviewed")
+                    CelebrationStat(value = learned, label = "learned")
+                }
+                Spacer(Modifier.height(34.dp))
+                Box(
+                    modifier = Modifier
+                        .height(52.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Brush.horizontalGradient(listOf(AuroraAccentSoft, AuroraAccent)))
+                        .clickable(onClick = onDone)
+                        .padding(horizontal = 44.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "Done",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                }
+            }
+        }
+        Confetti(modifier = Modifier.fillMaxSize())
+    }
+}
+
+@Composable
+private fun CelebrationStat(value: Int, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        AnimatedCount(
+            target = value,
+            style = MaterialTheme.typography.headlineLarge,
+            color = AuroraAccent,
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

@@ -129,6 +129,30 @@ class ReviewSessionScreenTest {
     }
 
     @Test
+    fun completing_the_session_shows_the_celebration() {
+        val repo = FakeRepo(listOf(word(1, "ephemeral", "ефемерний")))
+        val vm = viewModel(repo)
+        var done = false
+
+        composeRule.setContent {
+            ReviewSessionScreen(onDone = { done = true }, viewModel = vm)
+        }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("Tap to reveal").performClick()
+        scope.advanceUntilIdle()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("Good").performClick()
+        scope.advanceUntilIdle()
+        composeRule.waitForIdle()
+
+        // The only due card was graded → session complete → celebration.
+        composeRule.onNodeWithText("Nice work!").assertIsDisplayed()
+        composeRule.onNodeWithText("Done").performClick()
+        assertEquals(true, done)
+    }
+
+    @Test
     fun done_button_on_empty_state_invokes_the_callback() {
         val repo = FakeRepo(emptyList())
         val vm = viewModel(repo)
