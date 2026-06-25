@@ -243,6 +243,7 @@ class ReaderViewModel @Inject constructor(
                     bookId = bookId,
                     bookTitle = bookTitle.value ?: "",
                     createdAt = System.currentTimeMillis(),
+                    learned = false,
                 ),
             )
         }

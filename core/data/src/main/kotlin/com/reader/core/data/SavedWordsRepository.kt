@@ -12,6 +12,7 @@ interface SavedWordsRepository {
     fun observe(): Flow<List<SavedWord>>
     suspend fun save(word: SavedWord)
     suspend fun delete(id: Long)
+    suspend fun markLearned(id: Long, learned: Boolean)
 }
 
 class DefaultSavedWordsRepository @Inject constructor(
@@ -22,4 +23,5 @@ class DefaultSavedWordsRepository @Inject constructor(
 
     override suspend fun save(word: SavedWord) = dao.upsert(word.toEntity())
     override suspend fun delete(id: Long) = dao.deleteById(id)
+    override suspend fun markLearned(id: Long, learned: Boolean) = dao.updateLearned(id, learned)
 }

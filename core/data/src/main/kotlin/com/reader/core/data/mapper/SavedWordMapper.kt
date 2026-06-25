@@ -11,6 +11,7 @@ fun SavedWordEntity.toDomain(): SavedWord = SavedWord(
     bookId = bookId,
     bookTitle = bookTitle,
     createdAt = createdAt,
+    learned = learned,
 )
 
 fun SavedWord.toEntity(): SavedWordEntity = SavedWordEntity(
@@ -21,4 +22,5 @@ fun SavedWord.toEntity(): SavedWordEntity = SavedWordEntity(
     bookId = bookId,
     bookTitle = bookTitle,
     createdAt = createdAt,
+    learned = learned,
 )

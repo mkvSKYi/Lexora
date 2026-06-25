@@ -28,7 +28,7 @@ class SavedWordsViewModelTest {
 
     @Test fun emits_content_from_repo() = runTest {
         every { repo.observe() } returns flowOf(
-            listOf(SavedWord(1, "dog", "собака", null, 1, "Dune", 100)),
+            listOf(SavedWord(1, "dog", "собака", null, 1, "Dune", 100, learned = false)),
         )
         val vm = SavedWordsViewModel(repo)
         vm.uiState.test {

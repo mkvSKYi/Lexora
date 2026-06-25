@@ -30,7 +30,7 @@ class SavedWordsRepositoryTest {
     }
 
     @Test fun save_and_delete_delegate() = runTest {
-        repo.save(SavedWord(0, "dog", "собака", null, 1, "Dune", 100))
+        repo.save(SavedWord(0, "dog", "собака", null, 1, "Dune", 100, learned = false))
         coVerify { dao.upsert(any()) }
         repo.delete(5)
         coVerify { dao.deleteById(5) }
