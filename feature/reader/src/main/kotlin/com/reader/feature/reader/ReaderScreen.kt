@@ -106,6 +106,8 @@ fun ReaderScreen(
     val currentChapterHref by viewModel.currentChapterHref.collectAsStateWithLifecycle()
     val currentProgression by viewModel.currentProgression.collectAsStateWithLifecycle()
     val currentChapterTitle by viewModel.currentChapterTitle.collectAsStateWithLifecycle()
+    val bookmarks by viewModel.bookmarks.collectAsStateWithLifecycle()
+    val isBookmarked by viewModel.isCurrentBookmarked.collectAsStateWithLifecycle()
 
     val epubPreferences by viewModel.epubPreferences.collectAsStateWithLifecycle()
     val brightness by viewModel.brightness.collectAsStateWithLifecycle()
@@ -164,14 +166,22 @@ fun ReaderScreen(
                 entry.locator?.let(viewModel::goTo)
                 tocVisible = false
             },
+            bookmarks = bookmarks,
+            onBookmarkClick = { bm ->
+                viewModel.jumpToBookmark(bm)
+                tocVisible = false
+            },
+            onBookmarkDelete = viewModel::deleteBookmark,
             onDismiss = { tocVisible = false },
         )
     }
 
     ReaderChrome(
         visible = chromeVisible,
+        bookmarked = isBookmarked,
         onBack = onBack,
         onToc = { tocVisible = true },
+        onToggleBookmark = viewModel::toggleBookmark,
         onAa = { settingsVisible = true },
         onRevealStripTap = { chromeVisible = !chromeVisible },
         bottomBar = {
