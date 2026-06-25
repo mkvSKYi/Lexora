@@ -138,6 +138,13 @@ class ReaderViewModel @Inject constructor(
     private val _currentLocator = MutableStateFlow<Locator?>(null)
     private val _bookmarkBookId = MutableStateFlow<Long?>(null)
 
+    // Position memory per resource. Readium's scroll mode drops you at the END of a resource when
+    // you page backward across its boundary; we remember where you left each resource and jump back
+    // to that spot instead. Deliberate jumps (TOC/bookmark/search) are exempt via [restoreTargetHref].
+    private val lastLocatorByHref = mutableMapOf<String, Locator>()
+    private var lastSeenHref: String? = null
+    private var restoreTargetHref: String? = null
+
     /** Bookmarks for the open book, ordered by position. */
     @OptIn(ExperimentalCoroutinesApi::class)
     val bookmarks: StateFlow<List<Bookmark>> =
@@ -326,6 +333,13 @@ class ReaderViewModel @Inject constructor(
      * [onLocatorChanged].
      */
     fun goTo(locator: Locator) {
+        // Mark this as a deliberate jump so the per-resource position memory honors it rather than
+        // restoring the spot we last left this resource at.
+        restoreTargetHref = locator.href.toString()
+        navigateTo(locator)
+    }
+
+    private fun navigateTo(locator: Locator) {
         updateDerivedState(locator)
         _navigateRequests.tryEmit(locator)
     }
@@ -406,6 +420,27 @@ class ReaderViewModel @Inject constructor(
      * updates (e.g. while paginating) collapse into a single write.
      */
     fun onLocatorChanged(bookId: Long, locator: Locator) {
+        val href = locator.href.toString()
+        val isResourceChange = href != lastSeenHref
+        val wasDeliberate = href == restoreTargetHref
+        if (wasDeliberate) restoreTargetHref = null
+        if (isResourceChange) {
+            lastSeenHref = href
+            // Swipe navigation into a previously-visited resource: if Readium dropped us far from
+            // where we left it (its end, on backward paging), jump back to that spot.
+            if (!wasDeliberate) {
+                val saved = lastLocatorByHref[href]
+                if (saved != null) {
+                    val savedProg = saved.locations.progression ?: 0.0
+                    val nowProg = locator.locations.progression ?: 0.0
+                    if (kotlin.math.abs(nowProg - savedProg) > RESTORE_EPSILON) {
+                        navigateTo(saved)
+                        return
+                    }
+                }
+            }
+        }
+        lastLocatorByHref[href] = locator
         _currentLocator.value = locator
         updateDerivedState(locator)
         saveJob?.cancel()
@@ -446,5 +481,8 @@ class ReaderViewModel @Inject constructor(
     private companion object {
         const val SAVE_DEBOUNCE_MS = 500L
         const val RESULT_CAP = 200
+
+        // How far Readium's landing position must differ from the remembered spot before we restore.
+        const val RESTORE_EPSILON = 0.05
     }
 }

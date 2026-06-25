@@ -236,4 +236,39 @@ class ReaderViewModelTest {
 
         assertEquals(true, vm.isCurrentBookmarked.value)
     }
+
+    @Test fun returning_to_a_resource_restores_the_left_position() = runTest {
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords, bookmarks)
+        val nav = mutableListOf<Locator>()
+        backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
+            vm.navigateRequests.collect { nav.add(it) }
+        }
+        // Read resource A near its top, then swipe to B.
+        vm.onLocatorChanged(bookId = 1L, locator = locatorWithin("a.html", 0.10, 0.10))
+        vm.onLocatorChanged(bookId = 1L, locator = locatorWithin("b.html", 0.00, 0.20))
+        // Swipe back to A: Readium drops us at the end (0.99).
+        vm.onLocatorChanged(bookId = 1L, locator = locatorWithin("a.html", 0.99, 0.18))
+        advanceUntilIdle()
+
+        // The VM jumped A back to where we left it (0.10), not the forced end.
+        assertEquals(1, nav.size)
+        assertEquals(0.10, nav.last().locations.progression!!, 1e-9)
+    }
+
+    @Test fun deliberate_jump_is_not_overridden_by_restore() = runTest {
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords, bookmarks)
+        val nav = mutableListOf<Locator>()
+        backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
+            vm.navigateRequests.collect { nav.add(it) }
+        }
+        vm.onLocatorChanged(bookId = 1L, locator = locatorWithin("a.html", 0.10, 0.10)) // visited A at 0.10
+        vm.onLocatorChanged(bookId = 1L, locator = locatorWithin("b.html", 0.00, 0.20)) // now on B
+        vm.goTo(locatorWithin("a.html", 0.60, 0.14))                                     // deliberate jump to A@0.60
+        vm.onLocatorChanged(bookId = 1L, locator = locatorWithin("a.html", 0.60, 0.14)) // navigator confirms A@0.60
+        advanceUntilIdle()
+
+        // Only the deliberate goTo emitted; the restore did NOT override it back to 0.10.
+        assertEquals(1, nav.size)
+        assertEquals(0.60, nav.last().locations.progression!!, 1e-9)
+    }
 }
