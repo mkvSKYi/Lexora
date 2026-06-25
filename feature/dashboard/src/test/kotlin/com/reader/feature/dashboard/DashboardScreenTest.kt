@@ -25,12 +25,16 @@ class DashboardScreenTest {
         words: WordStats = WordStats(0, 0, 0),
         books: BookStats = BookStats(0, 0),
         hasActivity: Boolean = true,
+        todayActions: Int = 0,
+        dailyGoal: Int = 5,
     ) = DashboardUiState.Content(
         streak = streak,
         heatmap = (0 until DashboardViewModel.HEATMAP_DAYS).map { HeatCell(it.toLong(), 0, isFuture = false) },
         words = words,
         books = books,
         hasActivity = hasActivity,
+        todayActions = todayActions,
+        dailyGoal = dailyGoal,
     )
 
     @Test fun renders_streak_and_stats() {
@@ -77,6 +81,26 @@ class DashboardScreenTest {
         }
 
         composeRule.onNodeWithText("Nothing to review").assertIsNotEnabled()
+    }
+
+    @Test fun daily_goal_card_shows_progress_then_completion() {
+        composeRule.setContent {
+            MaterialTheme {
+                DashboardContent(state = content(todayActions = 2, dailyGoal = 5), onStartReview = {})
+            }
+        }
+        composeRule.onNodeWithText("DAILY GOAL").assertIsDisplayed()
+        composeRule.onNodeWithText("2/5").assertIsDisplayed()
+        composeRule.onNodeWithText("3 more to go").assertIsDisplayed()
+    }
+
+    @Test fun daily_goal_card_announces_completion() {
+        composeRule.setContent {
+            MaterialTheme {
+                DashboardContent(state = content(todayActions = 5, dailyGoal = 5), onStartReview = {})
+            }
+        }
+        composeRule.onNodeWithText("Goal complete!").assertIsDisplayed()
     }
 
     @Test fun shows_first_run_empty_state_when_no_activity() {

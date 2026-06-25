@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.MenuBook
@@ -59,6 +60,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.reader.core.designsystem.components.AuroraButton
+import com.reader.core.designsystem.components.DailyGoalRing
 import com.reader.core.designsystem.mascot.LexoraMascot
 import com.reader.core.designsystem.mascot.MascotMood
 import com.reader.core.designsystem.motion.AnimatedCount
@@ -139,8 +141,9 @@ fun DashboardContent(
                 ) {
                     item { AppearOnce(delayMillis = 0) { Header(mascotMood) } }
                     item { AppearOnce(delayMillis = 90) { StreakHero(state) } }
-                    item { AppearOnce(delayMillis = 180) { VocabularyCard(state.words, onStartReview) } }
-                    item { AppearOnce(delayMillis = 270) { BooksCard(state.books) } }
+                    item { AppearOnce(delayMillis = 160) { DailyGoalCard(state) } }
+                    item { AppearOnce(delayMillis = 230) { VocabularyCard(state.words, onStartReview) } }
+                    item { AppearOnce(delayMillis = 300) { BooksCard(state.books) } }
                 }
             }
 
@@ -315,6 +318,46 @@ private fun HeatmapLegend() {
         }
         Spacer(Modifier.width(4.dp))
         Text("More", color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp)
+    }
+}
+
+@Composable
+private fun DailyGoalCard(state: DashboardUiState.Content) {
+    GradientCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            DailyGoalRing(progress = state.goalProgress, modifier = Modifier.size(78.dp)) {
+                if (state.goalReached) {
+                    Icon(Icons.Filled.Check, contentDescription = null, tint = AuroraAccent, modifier = Modifier.size(32.dp))
+                } else {
+                    Text(
+                        text = "${state.todayActions}/${state.dailyGoal}",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+            Spacer(Modifier.width(18.dp))
+            Column {
+                SectionLabel(icon = Icons.Filled.Bolt, text = "DAILY GOAL")
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = if (state.goalReached) {
+                        "Goal complete!"
+                    } else {
+                        "${state.dailyGoal - state.todayActions} more to go"
+                    },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = "Save or review words to fill the ring.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }
 

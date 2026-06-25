@@ -25,5 +25,10 @@ sealed interface DashboardUiState {
         val words: WordStats,
         val books: BookStats,
         val hasActivity: Boolean,
-    ) : DashboardUiState
+        val todayActions: Int,
+        val dailyGoal: Int,
+    ) : DashboardUiState {
+        val goalProgress: Float get() = if (dailyGoal > 0) (todayActions.toFloat() / dailyGoal).coerceIn(0f, 1f) else 0f
+        val goalReached: Boolean get() = todayActions >= dailyGoal
+    }
 }

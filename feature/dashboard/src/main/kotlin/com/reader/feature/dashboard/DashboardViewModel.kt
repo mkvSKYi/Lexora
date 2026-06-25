@@ -93,6 +93,8 @@ class DashboardViewModel @Inject constructor(
                 finished = books.count { it.percent >= FINISHED_THRESHOLD },
             ),
             hasActivity = activeDays.isNotEmpty(),
+            todayActions = byDay[now]?.let { it.wordsSaved + it.wordsReviewed } ?: 0,
+            dailyGoal = DAILY_GOAL,
         )
     }
 
@@ -108,5 +110,6 @@ class DashboardViewModel @Inject constructor(
         const val HEATMAP_WEEKS = 13
         const val HEATMAP_DAYS = HEATMAP_WEEKS * 7
         const val FINISHED_THRESHOLD = 0.99
+        const val DAILY_GOAL = 5
     }
 }
