@@ -22,7 +22,7 @@ class BooksWithProgressTest {
     @Before fun setup() {
         val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
         db = Room.inMemoryDatabaseBuilder(ctx, ReaderDatabase::class.java).allowMainThreadQueries().build()
-        repo = DefaultLibraryRepository(db.bookDao(), db.savedWordDao(), db.bookmarkDao())
+        repo = DefaultLibraryRepository(db.bookDao(), db.savedWordDao(), db.bookmarkDao(), FakeActivityRepository())
     }
     @After fun tearDown() = db.close()
 

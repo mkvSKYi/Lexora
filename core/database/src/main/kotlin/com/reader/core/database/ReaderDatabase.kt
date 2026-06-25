@@ -6,15 +6,23 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.reader.core.database.dao.BookDao
 import com.reader.core.database.dao.BookmarkDao
+import com.reader.core.database.dao.DailyActivityDao
 import com.reader.core.database.dao.SavedWordDao
 import com.reader.core.database.entity.BookEntity
 import com.reader.core.database.entity.BookmarkEntity
+import com.reader.core.database.entity.DailyActivityEntity
 import com.reader.core.database.entity.ReadingProgressEntity
 import com.reader.core.database.entity.SavedWordEntity
 
 @Database(
-    entities = [BookEntity::class, ReadingProgressEntity::class, SavedWordEntity::class, BookmarkEntity::class],
-    version = 5,
+    entities = [
+        BookEntity::class,
+        ReadingProgressEntity::class,
+        SavedWordEntity::class,
+        BookmarkEntity::class,
+        DailyActivityEntity::class,
+    ],
+    version = 6,
     exportSchema = true,
 )
 abstract class ReaderDatabase : RoomDatabase() {
@@ -23,6 +31,8 @@ abstract class ReaderDatabase : RoomDatabase() {
     abstract fun savedWordDao(): SavedWordDao
 
     abstract fun bookmarkDao(): BookmarkDao
+
+    abstract fun dailyActivityDao(): DailyActivityDao
 
     companion object {
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -68,6 +78,18 @@ abstract class ReaderDatabase : RoomDatabase() {
                         "`createdAt` INTEGER NOT NULL)",
                 )
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_bookmarks_bookId` ON `bookmarks` (`bookId`)")
+            }
+        }
+
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `activity_days` (" +
+                        "`epochDay` INTEGER PRIMARY KEY NOT NULL, " +
+                        "`readingActive` INTEGER NOT NULL DEFAULT 0, " +
+                        "`wordsSaved` INTEGER NOT NULL DEFAULT 0, " +
+                        "`wordsReviewed` INTEGER NOT NULL DEFAULT 0)",
+                )
             }
         }
     }

@@ -1,5 +1,6 @@
 package com.reader.core.data
 
+import com.reader.core.data.activity.ActivityRepository
 import com.reader.core.data.mapper.toDomain
 import com.reader.core.data.mapper.toEntity
 import com.reader.core.data.model.Book
@@ -30,6 +31,7 @@ class DefaultLibraryRepository @Inject constructor(
     private val dao: BookDao,
     private val savedWordDao: com.reader.core.database.dao.SavedWordDao,
     private val bookmarkDao: com.reader.core.database.dao.BookmarkDao,
+    private val activityRepository: ActivityRepository,
 ) : LibraryRepository {
     override fun observeBooks(): Flow<List<Book>> =
         dao.observeBooks().map { list -> list.map { it.toDomain() } }
@@ -39,7 +41,10 @@ class DefaultLibraryRepository @Inject constructor(
 
     override suspend fun addBook(book: Book): Long = dao.upsertBook(book.toEntity())
     override suspend fun getBook(id: Long): Book? = dao.getBook(id)?.toDomain()
-    override suspend fun markOpened(id: Long, now: Long) = dao.updateLastOpened(id, now)
+    override suspend fun markOpened(id: Long, now: Long) {
+        dao.updateLastOpened(id, now)
+        activityRepository.recordReading()
+    }
     override suspend fun saveProgress(progress: ReadingProgress) =
         dao.upsertProgress(progress.toEntity())
     override suspend fun getProgress(bookId: Long): ReadingProgress? =

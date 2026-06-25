@@ -2,6 +2,7 @@ package com.reader.core.data
 
 import com.reader.core.data.mapper.toDomain
 import com.reader.core.data.mapper.toEntity
+import com.reader.core.data.activity.ActivityRepository
 import com.reader.core.data.model.SavedWord
 import com.reader.core.data.review.ReviewGrade
 import com.reader.core.data.review.ReviewScheduler
@@ -22,11 +23,15 @@ interface SavedWordsRepository {
 
 class DefaultSavedWordsRepository @Inject constructor(
     private val dao: SavedWordDao,
+    private val activityRepository: ActivityRepository,
 ) : SavedWordsRepository {
     override fun observe(): Flow<List<SavedWord>> =
         dao.observeAll().map { list -> list.map { it.toDomain() } }
 
-    override suspend fun save(word: SavedWord) = dao.upsert(word.toEntity())
+    override suspend fun save(word: SavedWord) {
+        dao.upsert(word.toEntity())
+        activityRepository.recordWordSaved()
+    }
     override suspend fun delete(id: Long) = dao.deleteById(id)
     override suspend fun markLearned(id: Long, learned: Boolean) = dao.updateLearned(id, learned)
 
@@ -49,6 +54,7 @@ class DefaultSavedWordsRepository @Inject constructor(
             updated.id, updated.easeFactor, updated.intervalDays, updated.repetitions,
             updated.dueAt, updated.lastReviewedAt, updated.learned,
         )
+        activityRepository.recordWordReviewed()
         return updated
     }
 }

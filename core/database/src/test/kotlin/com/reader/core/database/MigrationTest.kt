@@ -36,4 +36,26 @@ class MigrationTest {
         savedCursor.close()
         db.close()
     }
+
+    @Test fun migrate_5_to_6_adds_empty_activity_days_table() {
+        val dbName = "migration-5-6"
+        helper.createDatabase(dbName, 5).apply {
+            execSQL(
+                "INSERT INTO books (id,title,author,coverPath,filePath,addedAt,lastOpenedAt) " +
+                    "VALUES (1,'Dune',null,null,'/d.epub',1,null)",
+            )
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(dbName, 6, true, ReaderDatabase.MIGRATION_5_6)
+        // The book survives and the new activity_days table exists and is empty.
+        val books = db.query("SELECT title FROM books WHERE id = 1")
+        assertTrue(books.moveToFirst())
+        assertEquals("Dune", books.getString(0))
+        books.close()
+        val activity = db.query("SELECT COUNT(*) FROM activity_days")
+        assertTrue(activity.moveToFirst())
+        assertEquals(0, activity.getInt(0))
+        activity.close()
+        db.close()
+    }
 }

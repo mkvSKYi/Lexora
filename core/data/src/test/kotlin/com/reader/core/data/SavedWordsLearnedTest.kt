@@ -22,7 +22,7 @@ class SavedWordsLearnedTest {
     @Before fun setup() {
         val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
         db = Room.inMemoryDatabaseBuilder(ctx, ReaderDatabase::class.java).allowMainThreadQueries().build()
-        repo = DefaultSavedWordsRepository(db.savedWordDao())
+        repo = DefaultSavedWordsRepository(db.savedWordDao(), FakeActivityRepository())
     }
     @After fun tearDown() = db.close()
 

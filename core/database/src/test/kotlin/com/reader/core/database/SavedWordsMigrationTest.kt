@@ -59,6 +59,7 @@ class SavedWordsMigrationTest {
                 ReaderDatabase.MIGRATION_2_3,
                 ReaderDatabase.MIGRATION_3_4,
                 ReaderDatabase.MIGRATION_4_5,
+                ReaderDatabase.MIGRATION_5_6,
             )
             .build()
         val rows = db.savedWordDao().observeAll().first()
@@ -108,6 +109,7 @@ class SavedWordsMigrationTest {
                 ReaderDatabase.MIGRATION_2_3,
                 ReaderDatabase.MIGRATION_3_4,
                 ReaderDatabase.MIGRATION_4_5,
+                ReaderDatabase.MIGRATION_5_6,
             )
             .build()
         val rows = db.savedWordDao().observeAll().first()
@@ -165,6 +167,7 @@ class SavedWordsMigrationTest {
                 ReaderDatabase.MIGRATION_2_3,
                 ReaderDatabase.MIGRATION_3_4,
                 ReaderDatabase.MIGRATION_4_5,
+                ReaderDatabase.MIGRATION_5_6,
             )
             .build()
 

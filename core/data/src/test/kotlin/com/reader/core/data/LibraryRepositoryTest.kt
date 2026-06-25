@@ -18,7 +18,7 @@ class LibraryRepositoryTest {
     private val dao = mockk<BookDao>(relaxed = true)
     private val savedWordDao = mockk<SavedWordDao>(relaxed = true)
     private val bookmarkDao = mockk<BookmarkDao>(relaxed = true)
-    private val repo = DefaultLibraryRepository(dao, savedWordDao, bookmarkDao)
+    private val repo = DefaultLibraryRepository(dao, savedWordDao, bookmarkDao, FakeActivityRepository())
 
     @Test fun observeBooks_maps_entities_to_domain() = runTest {
         coEvery { dao.observeBooks() } returns flowOf(

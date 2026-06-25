@@ -1,0 +1,89 @@
+package com.reader.feature.dashboard
+
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import org.junit.Assert.assertEquals
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+
+@RunWith(RobolectricTestRunner::class)
+class DashboardScreenTest {
+
+    @get:Rule val composeRule = createComposeRule()
+
+    private fun content(
+        streak: Long = 0,
+        words: WordStats = WordStats(0, 0, 0),
+        books: BookStats = BookStats(0, 0),
+        hasActivity: Boolean = true,
+    ) = DashboardUiState.Content(
+        streak = streak,
+        heatmap = (0 until DashboardViewModel.HEATMAP_DAYS).map { HeatCell(it.toLong(), 0, isFuture = false) },
+        words = words,
+        books = books,
+        hasActivity = hasActivity,
+    )
+
+    @Test fun renders_streak_and_stats() {
+        composeRule.setContent {
+            MaterialTheme {
+                DashboardContent(
+                    state = content(streak = 5, words = WordStats(total = 12, learned = 4, due = 3)),
+                    onStartReview = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Today").assertIsDisplayed()
+        composeRule.onNodeWithText("5").assertIsDisplayed()
+        composeRule.onNodeWithText("day streak").assertIsDisplayed()
+        composeRule.onNodeWithText("12").assertIsDisplayed()
+        composeRule.onNodeWithText("Review 3").assertIsDisplayed()
+    }
+
+    @Test fun review_button_enabled_and_fires_when_words_are_due() {
+        var reviewed = false
+        composeRule.setContent {
+            MaterialTheme {
+                DashboardContent(
+                    state = content(words = WordStats(total = 5, learned = 0, due = 2)),
+                    onStartReview = { reviewed = true },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Review 2").assertIsEnabled()
+        composeRule.onNodeWithText("Review 2").performClick()
+        assertEquals(true, reviewed)
+    }
+
+    @Test fun review_button_disabled_when_nothing_due() {
+        composeRule.setContent {
+            MaterialTheme {
+                DashboardContent(
+                    state = content(words = WordStats(total = 5, learned = 5, due = 0)),
+                    onStartReview = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Nothing to review").assertIsNotEnabled()
+    }
+
+    @Test fun shows_first_run_empty_state_when_no_activity() {
+        composeRule.setContent {
+            MaterialTheme {
+                DashboardContent(state = content(hasActivity = false), onStartReview = {})
+            }
+        }
+
+        composeRule.onNodeWithText("Start reading to build your streak").assertIsDisplayed()
+    }
+}
