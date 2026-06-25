@@ -37,6 +37,7 @@ import org.robolectric.RobolectricTestRunner
 class ReaderViewModelTest {
     private val repo = mockk<LibraryRepository>(relaxed = true)
     private val savedWords = mockk<SavedWordsRepository>(relaxed = true)
+    private val bookmarks = mockk<com.reader.core.data.BookmarksRepository>(relaxed = true)
 
     /** In-memory fake so we can observe persisted JSON and feed values back through [observe]. */
     private class FakePreferencesRepository(
@@ -54,12 +55,15 @@ class ReaderViewModelTest {
         override suspend fun setHighlightSavedWords(value: Boolean) {}
     }
 
-    @Before fun setup() = Dispatchers.setMain(StandardTestDispatcher())
+    @Before fun setup() {
+        Dispatchers.setMain(StandardTestDispatcher())
+        io.mockk.every { bookmarks.observe(any()) } returns kotlinx.coroutines.flow.flowOf(emptyList())
+    }
 
     @After fun tearDown() = Dispatchers.resetMain()
 
     @Test fun onLocatorChanged_persists_progress() = runTest {
-        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords)
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords, bookmarks)
         val locator = Locator(
             href = org.readium.r2.shared.util.Url("ch1.html")!!,
             mediaType = org.readium.r2.shared.util.mediatype.MediaType.XHTML,
@@ -75,7 +79,7 @@ class ReaderViewModelTest {
         val firstPublication = mockk<Publication>(relaxed = true)
         val secondPublication = mockk<Publication>(relaxed = true)
         coEvery { opener.open(any()) } returnsMany listOf(firstPublication, secondPublication)
-        val vm = ReaderViewModel(repo, opener, FakePreferencesRepository(), savedWords)
+        val vm = ReaderViewModel(repo, opener, FakePreferencesRepository(), savedWords, bookmarks)
 
         vm.load(bookId = 1L)
         advanceUntilIdle()
@@ -87,7 +91,7 @@ class ReaderViewModelTest {
 
     @Test fun updateEpubPreferences_persists_serialized_json_round_trips() = runTest {
         val fakePrefs = FakePreferencesRepository()
-        val vm = ReaderViewModel(repo, mockk(relaxed = true), fakePrefs, savedWords)
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), fakePrefs, savedWords, bookmarks)
         advanceUntilIdle()
 
         vm.updateEpubPreferences(EpubPreferences(theme = Theme.DARK))
@@ -101,7 +105,7 @@ class ReaderViewModelTest {
     }
 
     @Test fun malformed_persisted_json_falls_back_to_defaults() = runTest {
-        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository("not json"), savedWords)
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository("not json"), savedWords, bookmarks)
         advanceUntilIdle()
 
         // Never crashes; emits default EpubPreferences (no theme set).
@@ -109,7 +113,7 @@ class ReaderViewModelTest {
     }
 
     @Test fun onLocatorChanged_updates_progression() = runTest {
-        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords)
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords, bookmarks)
         vm.onLocatorChanged(bookId = 1L, locator = locatorAt("ch1.html", 0.42))
         assertEquals(0.42f, vm.currentProgression.value)
     }
@@ -126,7 +130,7 @@ class ReaderViewModelTest {
             addedAt = 0L,
             lastOpenedAt = null,
         )
-        val vm = ReaderViewModel(repo, opener, FakePreferencesRepository(), savedWords)
+        val vm = ReaderViewModel(repo, opener, FakePreferencesRepository(), savedWords, bookmarks)
         vm.load(bookId = 7L)
         advanceUntilIdle()
 
@@ -145,7 +149,7 @@ class ReaderViewModelTest {
     }
 
     @Test fun goTo_emits_navigate_request() = runTest {
-        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords)
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords, bookmarks)
         val emitted = mutableListOf<Locator>()
         backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
             vm.navigateRequests.collect { emitted.add(it) }
