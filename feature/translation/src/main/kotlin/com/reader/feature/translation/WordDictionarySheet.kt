@@ -50,6 +50,9 @@ private const val COLLAPSED_DEFINITIONS = 5
  * [WordLookupState.Machine] translation, or an [WordLookupState.Error] message. The Save button
  * invokes [onSave] with the headword and the best available translation/definition; it is omitted
  * when there is nothing to save. Dismissing the sheet invokes [onDismiss].
+ *
+ * @param showSave whether to render the Save button (default true). Pass false for a read-only
+ *   sheet — e.g. opening an already-saved word from Saved Words just to view its definitions.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
