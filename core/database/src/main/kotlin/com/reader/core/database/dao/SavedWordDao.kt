@@ -28,4 +28,22 @@ interface SavedWordDao {
 
     @Query("UPDATE saved_words SET learned = :learned WHERE id = :id")
     suspend fun updateLearned(id: Long, learned: Boolean)
+
+    @Query("SELECT * FROM saved_words WHERE learned = 0 AND dueAt <= :now ORDER BY dueAt ASC LIMIT :limit")
+    suspend fun getDueWords(now: Long, limit: Int): List<SavedWordEntity>
+
+    @Query(
+        "UPDATE saved_words SET easeFactor = :easeFactor, intervalDays = :intervalDays, " +
+            "repetitions = :repetitions, dueAt = :dueAt, lastReviewedAt = :lastReviewedAt, " +
+            "learned = :learned WHERE id = :id",
+    )
+    suspend fun updateSchedule(
+        id: Long,
+        easeFactor: Double,
+        intervalDays: Int,
+        repetitions: Int,
+        dueAt: Long,
+        lastReviewedAt: Long?,
+        learned: Boolean,
+    )
 }

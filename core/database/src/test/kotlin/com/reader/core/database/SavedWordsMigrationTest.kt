@@ -8,6 +8,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -53,12 +54,68 @@ class SavedWordsMigrationTest {
         raw.close()
 
         val db = Room.databaseBuilder(ctx, ReaderDatabase::class.java, dbName)
-            .addMigrations(ReaderDatabase.MIGRATION_1_2, ReaderDatabase.MIGRATION_2_3)
+            .addMigrations(
+                ReaderDatabase.MIGRATION_1_2,
+                ReaderDatabase.MIGRATION_2_3,
+                ReaderDatabase.MIGRATION_3_4,
+            )
             .build()
         val rows = db.savedWordDao().observeAll().first()
         assertEquals(1, rows.size)
         assertEquals("dog", rows[0].term)
         assertFalse(rows[0].learned)
+        db.close()
+    }
+
+    @Test fun migrate3To4_preservesRow_andDefaultsSchedulingColumns() = runTest {
+        ctx.deleteDatabase(dbName)
+        // Build the full v3 schema (books, reading_progress, saved_words with learned) + a row,
+        // at user_version 3, so Room can validate the migrated DB against the v4 schema.
+        val raw = ctx.openOrCreateDatabase(dbName, Context.MODE_PRIVATE, null)
+        raw.execSQL(
+            "CREATE TABLE IF NOT EXISTS `books` (" +
+                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `title` TEXT NOT NULL, " +
+                "`author` TEXT, `coverPath` TEXT, `filePath` TEXT NOT NULL, " +
+                "`addedAt` INTEGER NOT NULL, `lastOpenedAt` INTEGER)",
+        )
+        raw.execSQL(
+            "CREATE TABLE IF NOT EXISTS `reading_progress` (" +
+                "`bookId` INTEGER NOT NULL, `locatorJson` TEXT, `percent` REAL NOT NULL, " +
+                "`updatedAt` INTEGER NOT NULL, PRIMARY KEY(`bookId`))",
+        )
+        raw.execSQL(
+            "CREATE TABLE IF NOT EXISTS `saved_words` (" +
+                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `term` TEXT NOT NULL, " +
+                "`translation` TEXT NOT NULL, `contextSentence` TEXT, `bookId` INTEGER NOT NULL, " +
+                "`bookTitle` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, " +
+                "`learned` INTEGER NOT NULL DEFAULT 0)",
+        )
+        raw.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS `index_saved_words_term_bookId` " +
+                "ON `saved_words` (`term`, `bookId`)",
+        )
+        raw.execSQL(
+            "INSERT INTO saved_words (term, translation, contextSentence, bookId, bookTitle, createdAt, learned) " +
+                "VALUES ('room', 'кімната', 'a quiet room', 7, 'Atomic Habits', 100, 0)",
+        )
+        raw.version = 3
+        raw.close()
+
+        val db = Room.databaseBuilder(ctx, ReaderDatabase::class.java, dbName)
+            .addMigrations(
+                ReaderDatabase.MIGRATION_1_2,
+                ReaderDatabase.MIGRATION_2_3,
+                ReaderDatabase.MIGRATION_3_4,
+            )
+            .build()
+        val rows = db.savedWordDao().observeAll().first()
+        assertEquals(1, rows.size)
+        assertEquals("room", rows[0].term)
+        assertEquals(2.5, rows[0].easeFactor, 1e-9)
+        assertEquals(0, rows[0].intervalDays)
+        assertEquals(0, rows[0].repetitions)
+        assertEquals(0L, rows[0].dueAt)
+        assertTrue(rows[0].lastReviewedAt == null)
         db.close()
     }
 }
