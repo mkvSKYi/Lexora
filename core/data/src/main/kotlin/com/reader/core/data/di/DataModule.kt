@@ -1,5 +1,7 @@
 package com.reader.core.data.di
 
+import com.reader.core.data.BookmarksRepository
+import com.reader.core.data.DefaultBookmarksRepository
 import com.reader.core.data.DefaultLibraryRepository
 import com.reader.core.data.DefaultSavedWordsRepository
 import com.reader.core.data.LibraryRepository
@@ -20,4 +22,8 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindSavedWordsRepository(impl: DefaultSavedWordsRepository): SavedWordsRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindBookmarksRepository(impl: DefaultBookmarksRepository): BookmarksRepository
 }

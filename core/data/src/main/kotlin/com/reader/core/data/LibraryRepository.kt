@@ -29,6 +29,7 @@ interface LibraryRepository {
 class DefaultLibraryRepository @Inject constructor(
     private val dao: BookDao,
     private val savedWordDao: com.reader.core.database.dao.SavedWordDao,
+    private val bookmarkDao: com.reader.core.database.dao.BookmarkDao,
 ) : LibraryRepository {
     override fun observeBooks(): Flow<List<Book>> =
         dao.observeBooks().map { list -> list.map { it.toDomain() } }
@@ -49,6 +50,7 @@ class DefaultLibraryRepository @Inject constructor(
         runCatching { File(book.filePath).delete() }
         book.coverPath?.let { path -> runCatching { File(path).delete() } }
         savedWordDao.deleteByBookId(book.id)
+        bookmarkDao.deleteByBookId(book.id)
         dao.deleteProgress(book.id)
         dao.deleteBook(book.id)
     }
