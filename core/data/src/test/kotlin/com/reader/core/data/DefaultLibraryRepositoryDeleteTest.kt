@@ -4,6 +4,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.reader.core.data.model.Book
 import com.reader.core.database.ReaderDatabase
+import com.reader.core.database.entity.BookmarkEntity
 import com.reader.core.database.entity.ReadingProgressEntity
 import com.reader.core.database.entity.SavedWordEntity
 import kotlinx.coroutines.flow.first
@@ -28,7 +29,7 @@ class DefaultLibraryRepositoryDeleteTest {
         val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
         db = Room.inMemoryDatabaseBuilder(ctx, ReaderDatabase::class.java)
             .allowMainThreadQueries().build()
-        repo = DefaultLibraryRepository(db.bookDao(), db.savedWordDao())
+        repo = DefaultLibraryRepository(db.bookDao(), db.savedWordDao(), db.bookmarkDao())
     }
     @After fun tearDown() = db.close()
 
@@ -42,10 +43,12 @@ class DefaultLibraryRepositoryDeleteTest {
         )
         db.bookDao().upsertProgress(ReadingProgressEntity(id, "{}", 0.5, 2L))
         db.savedWordDao().upsert(SavedWordEntity(0, "w", "в", null, id, "T", 3L))
+        db.bookmarkDao().insert(BookmarkEntity(0, id, "{}", "ch1.html", 0.5, 0.25, "C1", 4L))
         // A second book must remain untouched.
         val otherEpub = tempFile("book2")
         val otherId = repo.addBook(Book(0, "T2", null, null, otherEpub.absolutePath, 1L, null))
         db.savedWordDao().upsert(SavedWordEntity(0, "w2", "в2", null, otherId, "T2", 3L))
+        db.bookmarkDao().insert(BookmarkEntity(0, otherId, "{}", "ch2.html", 0.1, 0.1, "C2", 4L))
 
         repo.deleteBookCompletely(repo.getBook(id)!!)
 
@@ -53,10 +56,12 @@ class DefaultLibraryRepositoryDeleteTest {
         assertNull(repo.getBook(id))
         assertNull(db.bookDao().getProgress(id))
         assertEquals(0, db.savedWordDao().observeAll().first().count { it.bookId == id })
+        assertEquals(0, db.bookmarkDao().observeForBook(id).first().size)
         // other book intact
         assertTrue(otherEpub.exists())
         assertEquals("T2", repo.getBook(otherId)?.title)
         assertEquals(1, db.savedWordDao().observeAll().first().count { it.bookId == otherId })
+        assertEquals(1, db.bookmarkDao().observeForBook(otherId).first().size)
     }
 
     @Test fun progressPercent_returns_value_or_zero() = runTest {

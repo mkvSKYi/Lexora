@@ -2,16 +2,20 @@ package com.reader.feature.reader
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.reader.core.data.BookmarksRepository
 import com.reader.core.data.LibraryRepository
 import com.reader.core.data.SavedWordsRepository
+import com.reader.core.data.model.Bookmark
 import com.reader.core.data.model.ReadingProgress
 import com.reader.core.data.model.SavedWord
 import com.reader.core.data.preferences.ReaderPreferencesRepository
+import com.reader.feature.reader.bookmark.BookmarkMatcher
 import com.reader.feature.reader.highlight.HighlightState
 import com.reader.feature.reader.highlight.SavedWordHighlighter
 import com.reader.feature.reader.navigation.TocEntry
 import com.reader.feature.reader.navigation.TocResolver
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -22,7 +26,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -41,7 +47,10 @@ class ReaderViewModel @Inject constructor(
     private val publicationOpener: PublicationOpener,
     private val preferencesRepository: ReaderPreferencesRepository,
     private val savedWordsRepository: SavedWordsRepository,
+    private val bookmarksRepository: BookmarksRepository,
 ) : ViewModel() {
+
+    private val bookmarkEpsilon = 0.02
 
     /** The id of the currently loaded book, set on [load]; used when saving words. */
     private var currentBookId: Long = -1L
@@ -120,6 +129,24 @@ class ReaderViewModel @Inject constructor(
     /** Href of the TOC entry for the current position, used to highlight the active chapter. */
     val currentChapterHref: StateFlow<String?> = _currentChapterHref.asStateFlow()
 
+    private val _currentLocator = MutableStateFlow<Locator?>(null)
+    private val _bookmarkBookId = MutableStateFlow<Long?>(null)
+
+    /** Bookmarks for the open book, ordered by position. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val bookmarks: StateFlow<List<Bookmark>> =
+        _bookmarkBookId.filterNotNull()
+            .flatMapLatest { bookmarksRepository.observe(it) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Whether the current reading position is already bookmarked. */
+    val isCurrentBookmarked: StateFlow<Boolean> =
+        combine(_currentLocator, bookmarks) { loc, bms ->
+            val href = loc?.href?.toString()
+            val prog = loc?.locations?.progression
+            bms.any { BookmarkMatcher.matches(href, prog, it, bookmarkEpsilon) }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
     private val _navigateRequests = MutableSharedFlow<Locator>(extraBufferCapacity = 1)
 
     /**
@@ -178,6 +205,7 @@ class ReaderViewModel @Inject constructor(
 
     fun load(bookId: Long) {
         currentBookId = bookId
+        _bookmarkBookId.value = bookId
         val previousPublication = (_uiState.value as? ReaderUiState.Ready)?.publication
         _uiState.value = ReaderUiState.Loading
         viewModelScope.launch {
@@ -252,6 +280,44 @@ class ReaderViewModel @Inject constructor(
         goTo(locator)
     }
 
+    /** Adds a bookmark at the current position, or removes the matching one. */
+    fun toggleBookmark() {
+        val loc = _currentLocator.value ?: return
+        val bookId = _bookmarkBookId.value ?: return
+        val href = loc.href.toString()
+        val prog = loc.locations.progression
+        val existing = bookmarks.value.firstOrNull {
+            BookmarkMatcher.matches(href, prog, it, bookmarkEpsilon)
+        }
+        viewModelScope.launch {
+            if (existing != null) {
+                bookmarksRepository.delete(existing.id)
+            } else {
+                bookmarksRepository.add(
+                    Bookmark(
+                        id = 0,
+                        bookId = bookId,
+                        locatorJson = loc.toJSON().toString(),
+                        href = href,
+                        progression = prog ?: 0.0,
+                        totalProgression = loc.locations.totalProgression ?: 0.0,
+                        chapterTitle = _currentChapterTitle.value,
+                        createdAt = System.currentTimeMillis(),
+                    ),
+                )
+            }
+        }
+    }
+
+    fun deleteBookmark(id: Long) {
+        viewModelScope.launch { bookmarksRepository.delete(id) }
+    }
+
+    /** Jumps to a bookmark's saved position. */
+    fun jumpToBookmark(bookmark: Bookmark) {
+        runCatching { Locator.fromJSON(JSONObject(bookmark.locatorJson)) }.getOrNull()?.let { goTo(it) }
+    }
+
     /**
      * Persists a translated [term]/[translation] from the reader popover as a saved word, tagged
      * with the current book and an optional [contextSentence] (present for word taps). No-op if no
@@ -281,6 +347,7 @@ class ReaderViewModel @Inject constructor(
      * updates (e.g. while paginating) collapse into a single write.
      */
     fun onLocatorChanged(bookId: Long, locator: Locator) {
+        _currentLocator.value = locator
         updateDerivedState(locator)
         saveJob?.cancel()
         saveJob = viewModelScope.launch {

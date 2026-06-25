@@ -20,6 +20,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
@@ -67,8 +69,10 @@ private val ACCENT = Color(0xFF9B8CFF)
 @Composable
 fun ReaderChrome(
     visible: Boolean,
+    bookmarked: Boolean,
     onBack: () -> Unit,
     onToc: () -> Unit,
+    onToggleBookmark: () -> Unit,
     onAa: () -> Unit,
     onRevealStripTap: () -> Unit,
     bottomBar: @Composable () -> Unit,
@@ -126,6 +130,13 @@ fun ReaderChrome(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.List,
                             contentDescription = "Table of contents",
+                            tint = Color.White,
+                        )
+                    }
+                    IconButton(onClick = onToggleBookmark) {
+                        Icon(
+                            imageVector = if (bookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                            contentDescription = "Bookmark",
                             tint = Color.White,
                         )
                     }
