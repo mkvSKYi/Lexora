@@ -5,8 +5,11 @@ import com.reader.core.dictionary.DictionaryEntry
 import com.reader.core.dictionary.DictionaryRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -23,6 +26,7 @@ import org.junit.Test
 class WordLookupViewModelTest {
     private val dictionary = mockk<DictionaryRepository>()
     private val engine = mockk<TranslationEngine>()
+    private val tts = mockk<com.reader.feature.translation.tts.TtsSpeaker>(relaxed = true)
 
     @Before fun setup() = Dispatchers.setMain(StandardTestDispatcher())
     @After fun teardown() = Dispatchers.resetMain()
@@ -31,7 +35,7 @@ class WordLookupViewModelTest {
         coEvery { dictionary.lookup("dog") } returns DictionaryEntry(
             "dog", "/dɒɡ/", "noun", listOf("An animal.", "An animal."), listOf("собака", "собака", "пес"),
         )
-        val vm = WordLookupViewModel(dictionary, engine)
+        val vm = WordLookupViewModel(dictionary, engine, tts)
         vm.lookupState.test {
             assertNull(awaitItem())
             vm.onWord("dog")
@@ -53,7 +57,7 @@ class WordLookupViewModelTest {
         )
         coEvery { engine.ensureModelsReady() } returns Result.success(Unit)
         coEvery { engine.translate("dog") } returns Result.failure(RuntimeException("offline"))
-        val vm = WordLookupViewModel(dictionary, engine)
+        val vm = WordLookupViewModel(dictionary, engine, tts)
         vm.lookupState.test {
             assertNull(awaitItem())
             vm.onWord("dog")
@@ -71,7 +75,7 @@ class WordLookupViewModelTest {
         coEvery { dictionary.lookup("xylophone") } returns null
         coEvery { engine.ensureModelsReady() } returns Result.success(Unit)
         coEvery { engine.translate("xylophone") } returns Result.success("ксилофон")
-        val vm = WordLookupViewModel(dictionary, engine)
+        val vm = WordLookupViewModel(dictionary, engine, tts)
         vm.lookupState.test {
             assertNull(awaitItem())
             vm.onWord("xylophone")
@@ -82,11 +86,24 @@ class WordLookupViewModelTest {
     }
 
     @Test fun blank_word_is_ignored() = runTest {
-        val vm = WordLookupViewModel(dictionary, engine)
+        val vm = WordLookupViewModel(dictionary, engine, tts)
         vm.lookupState.test {
             assertNull(awaitItem())
             vm.onWord("   ")
             expectNoEvents()
         }
+    }
+
+    @Test fun speak_delegates_to_tts() = runTest {
+        every { tts.available } returns MutableStateFlow(true)
+        val vm = WordLookupViewModel(dictionary, engine, tts)
+        vm.speak("dog")
+        verify { tts.speak("dog") }
+    }
+
+    @Test fun ttsAvailable_proxies_speaker() = runTest {
+        every { tts.available } returns MutableStateFlow(true)
+        val vm = WordLookupViewModel(dictionary, engine, tts)
+        assertTrue(vm.ttsAvailable.value)
     }
 }
