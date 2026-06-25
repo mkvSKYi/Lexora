@@ -7,4 +7,5 @@ interface ReaderPreferencesRepository {
     suspend fun setEpubPreferencesJson(json: String)
     suspend fun setBrightness(value: Float?)
     suspend fun setWarmth(value: Float)
+    suspend fun setHighlightSavedWords(value: Boolean)
 }
