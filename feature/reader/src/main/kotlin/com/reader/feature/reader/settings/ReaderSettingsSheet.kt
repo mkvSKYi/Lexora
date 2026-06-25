@@ -262,19 +262,36 @@ private fun FontFamilyRow(prefs: EpubPreferences, onPrefsChange: (EpubPreference
     val current = prefs.fontFamily
     SectionLabel("Font")
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         FontChip("Default", null, current, prefs, onPrefsChange, ComposeFontFamily.Default)
         FontChip("Serif", FontFamily.SERIF, current, prefs, onPrefsChange, ComposeFontFamily.Serif)
+        FontChip("Sans", FontFamily.SANS_SERIF, current, prefs, onPrefsChange, ComposeFontFamily.SansSerif)
+        // Bundled premium fonts — names must match the navigator's font declarations. Each chip
+        // previews its label in the real bundled typeface.
+        FontChip("Literata", FontFamily("Literata"), current, prefs, onPrefsChange, assetFont("fonts/Literata.ttf"))
+        FontChip("Lora", FontFamily("Lora"), current, prefs, onPrefsChange, assetFont("fonts/Lora.ttf"))
         FontChip(
-            "Sans",
-            FontFamily.SANS_SERIF,
-            current,
-            prefs,
-            onPrefsChange,
-            ComposeFontFamily.SansSerif,
+            "Atkinson", FontFamily("Atkinson Hyperlegible"), current, prefs, onPrefsChange,
+            assetFont("fonts/AtkinsonHyperlegible-Regular.ttf"),
         )
+        FontChip("Inter", FontFamily("Inter"), current, prefs, onPrefsChange, assetFont("fonts/Inter.ttf"))
+        FontChip(
+            "Dyslexic", FontFamily.OPEN_DYSLEXIC, current, prefs, onPrefsChange,
+            assetFont("fonts/OpenDyslexic-Regular.otf"),
+        )
+    }
+}
+
+/** Loads a bundled asset font into a Compose [ComposeFontFamily] for chip previews. */
+@Composable
+private fun assetFont(path: String): ComposeFontFamily {
+    val assets = androidx.compose.ui.platform.LocalContext.current.assets
+    return androidx.compose.runtime.remember(path) {
+        ComposeFontFamily(androidx.compose.ui.text.font.Font(path = path, assetManager = assets))
     }
 }
 
