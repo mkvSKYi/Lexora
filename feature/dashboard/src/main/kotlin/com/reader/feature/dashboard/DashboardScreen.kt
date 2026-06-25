@@ -151,8 +151,8 @@ fun DashboardContent(
                         .fillMaxSize()
                         .statusBarsPadding()
                         .padding(horizontal = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 28.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp),
                 ) {
                     item { AppearOnce(delayMillis = 0) { LexiHero(mascotMood, state) } }
                     item { AppearOnce(delayMillis = 50) { XpRow(state.totalXp) } }
@@ -352,7 +352,7 @@ private fun StreakHero(state: DashboardUiState.Content) {
 @Composable
 private fun HeatmapGrid(cells: List<HeatCell>) {
     val weeks = cells.chunked(7) // each chunk is a Mon..Sun week → a calendar row
-    val gap = 6.dp
+    val gap = 5.dp
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(gap)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
             listOf("M", "T", "W", "T", "F", "S", "S").forEach { d ->
@@ -372,8 +372,8 @@ private fun HeatmapGrid(cells: List<HeatCell>) {
                     Box(
                         Modifier
                             .weight(1f)
-                            .aspectRatio(1f)
-                            .clip(RoundedCornerShape(11.dp))
+                            .aspectRatio(1.12f)
+                            .clip(RoundedCornerShape(10.dp))
                             .background(heatCellColor(c)),
                     )
                 }
