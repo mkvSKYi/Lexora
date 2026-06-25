@@ -134,7 +134,6 @@ private fun MainTabs(
             composable(LIBRARY_ROUTE) {
                 LibraryScreen(
                     onBookClick = onOpenBook,
-                    onOpenSaved = { tabsNav.navigate(WORDS_ROUTE) { launchSingleTop = true } },
                     viewModel = hiltViewModel(),
                 )
             }

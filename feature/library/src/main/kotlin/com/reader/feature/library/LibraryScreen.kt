@@ -34,8 +34,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -70,7 +71,6 @@ import kotlinx.coroutines.delay
 @Composable
 fun LibraryScreen(
     onBookClick: (Long) -> Unit,
-    onOpenSaved: () -> Unit,
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -90,14 +90,6 @@ fun LibraryScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { pickEpub.launch(arrayOf("application/epub+zip")) },
-                containerColor = AuroraAccentSoft,
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Import EPUB", tint = Color.White)
-            }
-        },
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {
             // Aurora glow behind the header.
@@ -128,7 +120,7 @@ fun LibraryScreen(
                         LibraryGrid(
                             books = state.books,
                             innerPadding = innerPadding,
-                            onOpenSaved = onOpenSaved,
+                            onImport = { pickEpub.launch(arrayOf("application/epub+zip")) },
                             onBookClick = onBookClick,
                             onBookLongClick = { menuBook = it },
                         )
@@ -162,7 +154,7 @@ fun LibraryScreen(
 private fun LibraryGrid(
     books: List<BookWithProgress>,
     innerPadding: PaddingValues,
-    onOpenSaved: () -> Unit,
+    onImport: () -> Unit,
     onBookClick: (Long) -> Unit,
     onBookLongClick: (Book) -> Unit,
 ) {
@@ -180,7 +172,7 @@ private fun LibraryGrid(
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         item(span = { GridItemSpan(maxLineSpan) }) {
-            LibraryHeader(bookCount = books.size, onOpenSaved = onOpenSaved)
+            LibraryHeader(bookCount = books.size, onImport = onImport)
         }
         if (hero != null) {
             item(span = { GridItemSpan(maxLineSpan) }) {
@@ -220,7 +212,7 @@ private fun LazyGridScope.booksIndexed(
 }
 
 @Composable
-private fun LibraryHeader(bookCount: Int, onOpenSaved: () -> Unit) {
+private fun LibraryHeader(bookCount: Int, onImport: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -245,8 +237,14 @@ private fun LibraryHeader(bookCount: Int, onOpenSaved: () -> Unit) {
                 )
             }
         }
-        IconButton(onClick = onOpenSaved) {
-            Icon(Icons.Filled.Bookmarks, contentDescription = "Saved words", tint = AuroraAccent)
+        FilledIconButton(
+            onClick = onImport,
+            colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = AuroraAccentSoft,
+                contentColor = Color.White,
+            ),
+        ) {
+            Icon(Icons.Default.Add, contentDescription = "Import EPUB")
         }
     }
 }
