@@ -5,7 +5,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -124,10 +123,10 @@ private fun MainTabs(
             navController = tabsNav,
             startDestination = TODAY_ROUTE,
             modifier = Modifier.padding(innerPadding),
-            enterTransition = { fadeIn(tween(220)) + scaleIn(tween(220), initialScale = 0.96f) },
-            exitTransition = { fadeOut(tween(150)) },
-            popEnterTransition = { fadeIn(tween(220)) + scaleIn(tween(220), initialScale = 0.96f) },
-            popExitTransition = { fadeOut(tween(150)) },
+            enterTransition = { fadeIn(tween(120)) },
+            exitTransition = { fadeOut(tween(120)) },
+            popEnterTransition = { fadeIn(tween(120)) },
+            popExitTransition = { fadeOut(tween(120)) },
         ) {
             composable(TODAY_ROUTE) {
                 DashboardScreen(onStartReview = onStartReview)

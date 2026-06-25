@@ -58,7 +58,9 @@ fun AppearOnce(
     delayMillis: Int = 0,
     content: @Composable () -> Unit,
 ) {
-    var shown by remember { mutableStateOf(false) }
+    // Saveable so revisiting a screen (e.g. switching back to a tab) doesn't replay the entrance —
+    // the content just appears, which also avoids redundant animation work on every navigation.
+    var shown by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     LaunchedEffectShown(delayMillis) { shown = true }
     val alpha by animateFloatAsState(if (shown) 1f else 0f, tween(200), label = "appearAlpha")
     val offsetY by animateDpAsState(

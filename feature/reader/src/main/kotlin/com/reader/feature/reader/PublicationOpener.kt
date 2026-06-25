@@ -2,6 +2,8 @@ package com.reader.feature.reader
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.util.asset.AssetRetriever
 import org.readium.r2.shared.util.getOrElse
@@ -43,11 +45,14 @@ class PublicationOpener @Inject constructor(
         )
     }
 
-    /** Returns the opened [Publication], or `null` if the file cannot be opened. */
-    suspend fun open(path: String): Publication? {
+    /**
+     * Returns the opened [Publication], or `null` if the file cannot be opened. Parsing + I/O run
+     * on [Dispatchers.IO] so opening a book never blocks the main thread.
+     */
+    suspend fun open(path: String): Publication? = withContext(Dispatchers.IO) {
         val asset = assetRetriever.retrieve(File(path).toUrl())
-            .getOrElse { return null }
-        return publicationOpener.open(asset, allowUserInteraction = false)
+            .getOrElse { return@withContext null }
+        publicationOpener.open(asset, allowUserInteraction = false)
             .getOrElse {
                 asset.close()
                 null

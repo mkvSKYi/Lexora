@@ -35,6 +35,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import org.readium.r2.navigator.epub.EpubPreferences
 import org.readium.r2.navigator.epub.EpubPreferencesSerializer
@@ -54,6 +55,7 @@ class ReaderViewModel @Inject constructor(
     private val preferencesRepository: ReaderPreferencesRepository,
     private val savedWordsRepository: SavedWordsRepository,
     private val bookmarksRepository: BookmarksRepository,
+    @com.reader.feature.reader.di.IoDispatcher private val ioDispatcher: kotlinx.coroutines.CoroutineDispatcher,
 ) : ViewModel() {
 
     private val bookmarkEpsilon = 0.02
@@ -314,20 +316,27 @@ class ReaderViewModel @Inject constructor(
      * state for the new book.
      */
     private suspend fun loadNavigationData(publication: Publication) {
-        readingOrderHrefs = publication.readingOrder.map { it.href.toString().substringBefore('#') }
-        positions = runCatching { publication.positions() }.getOrDefault(emptyList())
+        // positions() + locatorFromLink parse resources — keep them off the main thread.
+        val (order, pos, toc) = withContext(ioDispatcher) {
+            val order = publication.readingOrder.map { it.href.toString().substringBefore('#') }
+            val pos = runCatching { publication.positions() }.getOrDefault(emptyList())
 
-        val tocLinks = publication.tableOfContents
-        val flattened = TocResolver.flatten(tocLinks)
-        // Re-walk the same links in the same depth-first order flatten uses, so each flattened
-        // entry lines up with its source link and we can resolve the entry's locator from it.
-        val orderedLinks = flattenLinks(tocLinks)
-        _toc.value = flattened.mapIndexed { index, entry ->
-            val link = orderedLinks.getOrNull(index)
-            val locator = link?.let { publication.locatorFromLink(it) }
-            entry.copy(locator = locator)
+            val tocLinks = publication.tableOfContents
+            val flattened = TocResolver.flatten(tocLinks)
+            // Re-walk the same links in the same depth-first order flatten uses, so each flattened
+            // entry lines up with its source link and we can resolve the entry's locator from it.
+            val orderedLinks = flattenLinks(tocLinks)
+            val toc = flattened.mapIndexed { index, entry ->
+                val link = orderedLinks.getOrNull(index)
+                val locator = link?.let { publication.locatorFromLink(it) }
+                entry.copy(locator = locator)
+            }
+            Triple(order, pos, toc)
         }
 
+        readingOrderHrefs = order
+        positions = pos
+        _toc.value = toc
         _currentProgression.value = 0f
         _currentChapterTitle.value = null
         _currentChapterHref.value = null

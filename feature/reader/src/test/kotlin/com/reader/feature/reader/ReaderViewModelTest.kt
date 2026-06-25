@@ -64,7 +64,7 @@ class ReaderViewModelTest {
     @After fun tearDown() = Dispatchers.resetMain()
 
     @Test fun onLocatorChanged_persists_progress() = runTest {
-        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords, bookmarks)
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords, bookmarks, kotlinx.coroutines.Dispatchers.Unconfined)
         val locator = Locator(
             href = org.readium.r2.shared.util.Url("ch1.html")!!,
             mediaType = org.readium.r2.shared.util.mediatype.MediaType.XHTML,
@@ -80,7 +80,7 @@ class ReaderViewModelTest {
         val firstPublication = mockk<Publication>(relaxed = true)
         val secondPublication = mockk<Publication>(relaxed = true)
         coEvery { opener.open(any()) } returnsMany listOf(firstPublication, secondPublication)
-        val vm = ReaderViewModel(repo, opener, FakePreferencesRepository(), savedWords, bookmarks)
+        val vm = ReaderViewModel(repo, opener, FakePreferencesRepository(), savedWords, bookmarks, kotlinx.coroutines.Dispatchers.Unconfined)
 
         vm.load(bookId = 1L)
         advanceUntilIdle()
@@ -92,7 +92,7 @@ class ReaderViewModelTest {
 
     @Test fun updateEpubPreferences_persists_serialized_json_round_trips() = runTest {
         val fakePrefs = FakePreferencesRepository()
-        val vm = ReaderViewModel(repo, mockk(relaxed = true), fakePrefs, savedWords, bookmarks)
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), fakePrefs, savedWords, bookmarks, kotlinx.coroutines.Dispatchers.Unconfined)
         advanceUntilIdle()
 
         vm.updateEpubPreferences(EpubPreferences(theme = Theme.DARK))
@@ -106,7 +106,7 @@ class ReaderViewModelTest {
     }
 
     @Test fun malformed_persisted_json_falls_back_to_defaults() = runTest {
-        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository("not json"), savedWords, bookmarks)
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository("not json"), savedWords, bookmarks, kotlinx.coroutines.Dispatchers.Unconfined)
         advanceUntilIdle()
 
         // Never crashes; emits default EpubPreferences (no theme set).
@@ -114,7 +114,7 @@ class ReaderViewModelTest {
     }
 
     @Test fun onLocatorChanged_updates_progression() = runTest {
-        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords, bookmarks)
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords, bookmarks, kotlinx.coroutines.Dispatchers.Unconfined)
         vm.onLocatorChanged(bookId = 1L, locator = locatorAt("ch1.html", 0.42))
         assertEquals(0.42f, vm.currentProgression.value)
     }
@@ -131,7 +131,7 @@ class ReaderViewModelTest {
             addedAt = 0L,
             lastOpenedAt = null,
         )
-        val vm = ReaderViewModel(repo, opener, FakePreferencesRepository(), savedWords, bookmarks)
+        val vm = ReaderViewModel(repo, opener, FakePreferencesRepository(), savedWords, bookmarks, kotlinx.coroutines.Dispatchers.Unconfined)
         vm.load(bookId = 7L)
         advanceUntilIdle()
 
@@ -150,7 +150,7 @@ class ReaderViewModelTest {
     }
 
     @Test fun goTo_emits_navigate_request() = runTest {
-        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords, bookmarks)
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords, bookmarks, kotlinx.coroutines.Dispatchers.Unconfined)
         val emitted = mutableListOf<Locator>()
         backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
             vm.navigateRequests.collect { emitted.add(it) }
@@ -186,7 +186,7 @@ class ReaderViewModelTest {
 
     @Test fun toggleBookmark_adds_when_none_matches() = runTest {
         io.mockk.every { bookmarks.observe(3L) } returns kotlinx.coroutines.flow.flowOf(emptyList())
-        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords, bookmarks)
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords, bookmarks, kotlinx.coroutines.Dispatchers.Unconfined)
         backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
             vm.bookmarks.collect {}
         }
@@ -209,7 +209,7 @@ class ReaderViewModelTest {
     @Test fun toggleBookmark_deletes_when_one_matches() = runTest {
         io.mockk.every { bookmarks.observe(3L) } returns
             kotlinx.coroutines.flow.flowOf(listOf(bookmark(id = 9L, href = "ch1.html", progression = 0.5)))
-        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords, bookmarks)
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords, bookmarks, kotlinx.coroutines.Dispatchers.Unconfined)
         backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
             vm.bookmarks.collect {}
         }
@@ -227,7 +227,7 @@ class ReaderViewModelTest {
     @Test fun isCurrentBookmarked_reflects_match() = runTest {
         io.mockk.every { bookmarks.observe(3L) } returns
             kotlinx.coroutines.flow.flowOf(listOf(bookmark(id = 9L, href = "ch1.html", progression = 0.5)))
-        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords, bookmarks)
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords, bookmarks, kotlinx.coroutines.Dispatchers.Unconfined)
         backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
             vm.isCurrentBookmarked.collect {}
         }
@@ -239,7 +239,7 @@ class ReaderViewModelTest {
     }
 
     @Test fun returning_to_a_resource_restores_the_left_position() = runTest {
-        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords, bookmarks)
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords, bookmarks, kotlinx.coroutines.Dispatchers.Unconfined)
         val nav = mutableListOf<Locator>()
         backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
             vm.navigateRequests.collect { nav.add(it) }
@@ -257,7 +257,7 @@ class ReaderViewModelTest {
     }
 
     @Test fun deliberate_jump_is_not_overridden_by_restore() = runTest {
-        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords, bookmarks)
+        val vm = ReaderViewModel(repo, mockk(relaxed = true), FakePreferencesRepository(), savedWords, bookmarks, kotlinx.coroutines.Dispatchers.Unconfined)
         val nav = mutableListOf<Locator>()
         backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
             vm.navigateRequests.collect { nav.add(it) }

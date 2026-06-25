@@ -41,9 +41,10 @@ class DashboardViewModel @Inject constructor(
     private val monthDate = LocalDate.ofEpochDay(today.epochDay())
     private val heatmapStart: Long = monthDate.withDayOfMonth(1)
         .let { it.minusDays((it.dayOfWeek.value - 1).toLong()) }.toEpochDay()
+    private val monthStartEpoch: Long = monthDate.withDayOfMonth(1).toEpochDay()
+    private val monthEndEpoch: Long = monthDate.withDayOfMonth(1).plusMonths(1).minusDays(1).toEpochDay()
     private val heatmapDays: Int = run {
-        val firstOfMonth = monthDate.withDayOfMonth(1)
-        val lastOfMonth = firstOfMonth.plusMonths(1).minusDays(1)
+        val lastOfMonth = monthDate.withDayOfMonth(1).plusMonths(1).minusDays(1)
         val gridEnd = lastOfMonth.plusDays((7 - lastOfMonth.dayOfWeek.value).toLong())
         (gridEnd.toEpochDay() - heatmapStart + 1).toInt()
     }
@@ -83,13 +84,12 @@ class DashboardViewModel @Inject constructor(
         totalXp: Int,
     ): DashboardUiState.Content {
         val now = today.epochDay()
-        val nowMonth = LocalDate.ofEpochDay(now).monthValue
         val byDay = activity.associateBy { it.epochDay }
         val activeDays = activity.filter { it.isActive }.map { it.epochDay }.toSet()
 
         val heatmap = (0 until heatmapDays).map { offset ->
             val day = heatmapStart + offset
-            val muted = day > now || LocalDate.ofEpochDay(day).monthValue != nowMonth
+            val muted = day > now || day < monthStartEpoch || day > monthEndEpoch
             HeatCell(epochDay = day, level = bucket(byDay[day]?.total ?: 0), muted = muted)
         }
 
