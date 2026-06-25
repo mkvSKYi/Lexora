@@ -12,6 +12,11 @@ fun SavedWordEntity.toDomain(): SavedWord = SavedWord(
     bookTitle = bookTitle,
     createdAt = createdAt,
     learned = learned,
+    easeFactor = easeFactor,
+    intervalDays = intervalDays,
+    repetitions = repetitions,
+    dueAt = dueAt,
+    lastReviewedAt = lastReviewedAt,
 )
 
 fun SavedWord.toEntity(): SavedWordEntity = SavedWordEntity(
@@ -23,4 +28,9 @@ fun SavedWord.toEntity(): SavedWordEntity = SavedWordEntity(
     bookTitle = bookTitle,
     createdAt = createdAt,
     learned = learned,
+    easeFactor = easeFactor,
+    intervalDays = intervalDays,
+    repetitions = repetitions,
+    dueAt = dueAt,
+    lastReviewedAt = lastReviewedAt,
 )

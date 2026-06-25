@@ -10,10 +10,12 @@ import androidx.navigation.navArgument
 import com.reader.feature.library.LibraryScreen
 import com.reader.feature.reader.ReaderScreen
 import com.reader.feature.saved.SavedWordsScreen
+import com.reader.feature.saved.review.ReviewSessionScreen
 
 private const val LIBRARY_ROUTE = "library"
 private const val READER_ROUTE = "reader"
 private const val SAVED_ROUTE = "saved"
+private const val REVIEW_ROUTE = "review"
 private const val BOOK_ID_ARG = "bookId"
 
 @Composable
@@ -28,7 +30,13 @@ fun ReaderNavHost() {
             )
         }
         composable(SAVED_ROUTE) {
-            SavedWordsScreen(onBack = { navController.popBackStack() })
+            SavedWordsScreen(
+                onBack = { navController.popBackStack() },
+                onStartReview = { navController.navigate(REVIEW_ROUTE) },
+            )
+        }
+        composable(REVIEW_ROUTE) {
+            ReviewSessionScreen(onDone = { navController.popBackStack() })
         }
         composable(
             route = "$READER_ROUTE/{$BOOK_ID_ARG}",

@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -61,6 +62,7 @@ private val LearnedGreen = Color(0xFF34C759)
 @Composable
 fun SavedWordsScreen(
     onBack: () -> Unit,
+    onStartReview: () -> Unit,
     viewModel: SavedWordsViewModel = hiltViewModel(),
 ) {
     val wordVm: WordLookupViewModel = hiltViewModel()
@@ -108,6 +110,14 @@ fun SavedWordsScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         item { Header(onBack = onBack) }
+                        if (state.dueCount > 0) {
+                            item {
+                                ReviewEntryCard(
+                                    dueCount = state.dueCount,
+                                    onClick = onStartReview,
+                                )
+                            }
+                        }
                         item {
                             StatsCard(
                                 learnedCount = state.learnedCount,
@@ -169,6 +179,48 @@ private fun Header(onBack: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(start = 4.dp),
         )
+    }
+}
+
+@Composable
+private fun ReviewEntryCard(dueCount: Int, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Accent.copy(alpha = 0.22f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(Brush.linearGradient(listOf(Accent.copy(alpha = 0.7f), Accent))),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.School,
+                    contentDescription = null,
+                    tint = Color.White,
+                )
+            }
+            Column(modifier = Modifier.weight(1f).padding(start = 16.dp)) {
+                Text(
+                    text = "Review",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = "$dueCount due",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Accent,
+                )
+            }
+        }
     }
 }
 

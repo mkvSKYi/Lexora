@@ -8,5 +8,6 @@ sealed interface SavedWordsUiState {
         val words: List<SavedWord>,
         val learnedCount: Int,
         val totalCount: Int,
+        val dueCount: Int,
     ) : SavedWordsUiState
 }

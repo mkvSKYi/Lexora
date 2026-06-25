@@ -17,4 +17,9 @@ data class SavedWordEntity(
     val bookTitle: String,
     val createdAt: Long,
     val learned: Boolean = false,
+    val easeFactor: Double = 2.5,
+    val intervalDays: Int = 0,
+    val repetitions: Int = 0,
+    val dueAt: Long = 0,
+    val lastReviewedAt: Long? = null,
 )
