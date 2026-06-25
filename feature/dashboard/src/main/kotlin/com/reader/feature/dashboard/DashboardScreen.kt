@@ -150,8 +150,8 @@ fun DashboardContent(
                         .fillMaxSize()
                         .statusBarsPadding()
                         .padding(horizontal = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(20.dp),
-                    contentPadding = PaddingValues(top = 10.dp, bottom = 32.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 28.dp),
                 ) {
                     item { AppearOnce(delayMillis = 0) { LexiHero(mascotMood, state) } }
                     item { AppearOnce(delayMillis = 50) { XpRow(state.totalXp) } }
@@ -182,13 +182,13 @@ private fun LexiHero(mascotMood: MascotMood, state: DashboardUiState.Content) {
         Spacer(Modifier.height(6.dp))
         Text(
             text = greeting(),
-            style = MaterialTheme.typography.displaySmall,
+            style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
         )
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            LexoraMascot(mood = mascotMood, modifier = Modifier.size(92.dp))
+            LexoraMascot(mood = mascotMood, modifier = Modifier.size(74.dp))
             SpeechBubble(
                 text = lexiMessage(state),
                 modifier = Modifier.weight(1f),
@@ -276,7 +276,7 @@ private fun StreakHero(state: DashboardUiState.Content) {
                     listOf(AuroraDeep, AuroraAccentSoft, AuroraAccent),
                 ),
             )
-            .padding(24.dp),
+            .padding(horizontal = 20.dp, vertical = 18.dp),
     ) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -301,7 +301,7 @@ private fun StreakHero(state: DashboardUiState.Content) {
                             target = state.streak.toInt(),
                             style = TextStyle(
                                 fontFamily = Literata,
-                                fontSize = 46.sp,
+                                fontSize = 40.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
                                 shadow = Shadow(Color.White.copy(alpha = 0.55f), blurRadius = 26f),
@@ -328,9 +328,9 @@ private fun StreakHero(state: DashboardUiState.Content) {
                     }
                 }
             }
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(12.dp))
             Row(
-                Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                Modifier.fillMaxWidth().padding(bottom = 6.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -351,8 +351,8 @@ private fun StreakHero(state: DashboardUiState.Content) {
 @Composable
 private fun HeatmapGrid(cells: List<HeatCell>) {
     val weeks = cells.chunked(7) // each chunk is a Mon..Sun week → a calendar row
-    val cellSize = 32.dp
-    val gap = 5.dp
+    val cellSize = 27.dp
+    val gap = 4.dp
     Column(verticalArrangement = Arrangement.spacedBy(gap)) {
         Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
             listOf("M", "T", "W", "T", "F", "S", "S").forEach { d ->
