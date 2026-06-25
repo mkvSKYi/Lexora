@@ -8,4 +8,5 @@ interface ReaderPreferencesRepository {
     suspend fun setBrightness(value: Float?)
     suspend fun setWarmth(value: Float)
     suspend fun setHighlightSavedWords(value: Boolean)
+    suspend fun setLockRotation(value: Boolean)
 }

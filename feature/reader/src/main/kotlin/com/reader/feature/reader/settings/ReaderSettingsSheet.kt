@@ -106,6 +106,8 @@ fun ReaderSettingsSheet(
     onWarmthChange: (Float) -> Unit,
     highlightEnabled: Boolean,
     onHighlightChange: (Boolean) -> Unit,
+    lockRotation: Boolean,
+    onLockRotationChange: (Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -131,7 +133,21 @@ fun ReaderSettingsSheet(
             BrightnessRow(brightness = brightness, onBrightnessChange = onBrightnessChange)
             WarmthRow(warmth = warmth, onWarmthChange = onWarmthChange)
             HighlightRow(enabled = highlightEnabled, onEnabledChange = onHighlightChange)
+            LockRotationRow(enabled = lockRotation, onEnabledChange = onLockRotationChange)
         }
+    }
+}
+
+/** Locks the screen orientation while reading, so the page doesn't rotate in your hands. */
+@Composable
+private fun LockRotationRow(enabled: Boolean, onEnabledChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        SectionLabel("Lock rotation")
+        Switch(checked = enabled, onCheckedChange = onEnabledChange)
     }
 }
 

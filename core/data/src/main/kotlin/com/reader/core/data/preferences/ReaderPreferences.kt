@@ -14,4 +14,5 @@ data class ReaderPreferences(
     val brightness: Float?,
     val warmth: Float,
     val highlightSavedWords: Boolean = true,
+    val lockRotation: Boolean = false,
 )

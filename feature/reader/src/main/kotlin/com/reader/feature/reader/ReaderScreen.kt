@@ -118,11 +118,25 @@ fun ReaderScreen(
     val brightness by viewModel.brightness.collectAsStateWithLifecycle()
     val warmth by viewModel.warmth.collectAsStateWithLifecycle()
     val highlightEnabled by viewModel.highlightEnabled.collectAsStateWithLifecycle()
+    val lockRotation by viewModel.lockRotation.collectAsStateWithLifecycle()
 
     // Apply the brightness override to the host window while the reader is shown, restoring
     // the window's previous brightness when we leave (so the system value isn't left stuck).
     val context = LocalContext.current
     val window = remember(context) { context.findActivity()?.window }
+
+    // Lock/unlock the screen orientation while reading; always restore freedom on leaving.
+    val activity = remember(context) { context.findActivity() }
+    DisposableEffect(activity, lockRotation) {
+        activity?.requestedOrientation = if (lockRotation) {
+            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LOCKED
+        } else {
+            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+        onDispose {
+            activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
     val currentBrightness by rememberUpdatedState(brightness)
     DisposableEffect(window) {
         val attrs = window?.attributes
@@ -159,6 +173,8 @@ fun ReaderScreen(
             onWarmthChange = viewModel::setWarmth,
             highlightEnabled = highlightEnabled,
             onHighlightChange = viewModel::setHighlightEnabled,
+            lockRotation = lockRotation,
+            onLockRotationChange = viewModel::setLockRotation,
             onDismiss = { settingsVisible = false },
         )
     }

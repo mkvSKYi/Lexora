@@ -36,6 +36,7 @@ class DataStoreReaderPreferencesRepository(
                 brightness = prefs[BRIGHTNESS],
                 warmth = prefs[WARMTH] ?: 0f,
                 highlightSavedWords = prefs[HIGHLIGHT_SAVED] ?: true,
+                lockRotation = prefs[LOCK_ROTATION] ?: false,
             )
         }
 
@@ -57,11 +58,16 @@ class DataStoreReaderPreferencesRepository(
         dataStore.edit { it[HIGHLIGHT_SAVED] = value }
     }
 
+    override suspend fun setLockRotation(value: Boolean) {
+        dataStore.edit { it[LOCK_ROTATION] = value }
+    }
+
     private companion object {
         const val DEFAULT_STORE_NAME = "reader_prefs"
         val EPUB_PREFS = stringPreferencesKey("epub_prefs")
         val BRIGHTNESS = floatPreferencesKey("brightness")
         val WARMTH = floatPreferencesKey("warmth")
         val HIGHLIGHT_SAVED = booleanPreferencesKey("highlight_saved_words")
+        val LOCK_ROTATION = booleanPreferencesKey("lock_rotation")
     }
 }

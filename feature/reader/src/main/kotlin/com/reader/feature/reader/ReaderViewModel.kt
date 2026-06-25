@@ -95,6 +95,11 @@ class ReaderViewModel @Inject constructor(
     /** Whether saved-word highlighting is on (persisted; default true). */
     val highlightEnabled: StateFlow<Boolean> = _highlightEnabled.asStateFlow()
 
+    private val _lockRotation = MutableStateFlow(false)
+
+    /** Whether the screen orientation is locked while reading (persisted; default off). */
+    val lockRotation: StateFlow<Boolean> = _lockRotation.asStateFlow()
+
     /** Saved-word highlight state for the navigator: the not-yet-learned terms + the toggle. */
     val highlight: StateFlow<HighlightState> =
         combine(savedWordsRepository.observe(), _highlightEnabled) { words, enabled ->
@@ -232,6 +237,7 @@ class ReaderViewModel @Inject constructor(
             _brightness.value = prefs.brightness
             _warmth.value = prefs.warmth
             _highlightEnabled.value = prefs.highlightSavedWords
+            _lockRotation.value = prefs.lockRotation
         }
     }
 
@@ -251,6 +257,12 @@ class ReaderViewModel @Inject constructor(
     fun setHighlightEnabled(value: Boolean) {
         _highlightEnabled.value = value
         viewModelScope.launch { preferencesRepository.setHighlightSavedWords(value) }
+    }
+
+    /** Toggles the reading screen-rotation lock and persists it. */
+    fun setLockRotation(value: Boolean) {
+        _lockRotation.value = value
+        viewModelScope.launch { preferencesRepository.setLockRotation(value) }
     }
 
     /** Updates the live preferences and persists them as Readium-serialized JSON. */

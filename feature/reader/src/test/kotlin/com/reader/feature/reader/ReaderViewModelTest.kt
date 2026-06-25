@@ -53,6 +53,7 @@ class ReaderViewModelTest {
         override suspend fun setBrightness(value: Float?) {}
         override suspend fun setWarmth(value: Float) {}
         override suspend fun setHighlightSavedWords(value: Boolean) {}
+        override suspend fun setLockRotation(value: Boolean) {}
     }
 
     @Before fun setup() {
