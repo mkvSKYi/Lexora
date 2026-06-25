@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.reader.core.database.ReaderDatabase
 import com.reader.core.database.dao.BookDao
+import com.reader.core.database.dao.BookmarkDao
 import com.reader.core.database.dao.SavedWordDao
 import dagger.Module
 import dagger.Provides
@@ -28,6 +29,7 @@ object DatabaseModule {
             ReaderDatabase.MIGRATION_1_2,
             ReaderDatabase.MIGRATION_2_3,
             ReaderDatabase.MIGRATION_3_4,
+            ReaderDatabase.MIGRATION_4_5,
         ).build()
 
     @Provides
@@ -35,4 +37,7 @@ object DatabaseModule {
 
     @Provides
     fun provideSavedWordDao(database: ReaderDatabase): SavedWordDao = database.savedWordDao()
+
+    @Provides
+    fun provideBookmarkDao(database: ReaderDatabase): BookmarkDao = database.bookmarkDao()
 }
