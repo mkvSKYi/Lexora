@@ -5,6 +5,7 @@ import app.cash.turbine.test
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -38,6 +39,21 @@ class DataStoreReaderPreferencesRepositoryTest {
             assertEquals("""{"theme":"dark"}""", p.epubPreferencesJson)
             assertEquals(0.4f, p.brightness)
             assertEquals(0.3f, p.warmth)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test fun defaults_highlight_saved_words_on() = runTest {
+        repo.observe().test {
+            assertTrue(awaitItem().highlightSavedWords)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test fun persists_highlight_saved_words_toggle() = runTest {
+        repo.setHighlightSavedWords(false)
+        repo.observe().test {
+            assertEquals(false, awaitItem().highlightSavedWords)
             cancelAndIgnoreRemainingEvents()
         }
     }

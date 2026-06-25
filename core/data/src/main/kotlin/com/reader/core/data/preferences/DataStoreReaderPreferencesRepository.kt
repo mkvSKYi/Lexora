@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -34,6 +35,7 @@ class DataStoreReaderPreferencesRepository(
                 epubPreferencesJson = prefs[EPUB_PREFS],
                 brightness = prefs[BRIGHTNESS],
                 warmth = prefs[WARMTH] ?: 0f,
+                highlightSavedWords = prefs[HIGHLIGHT_SAVED] ?: true,
             )
         }
 
@@ -51,10 +53,15 @@ class DataStoreReaderPreferencesRepository(
         dataStore.edit { it[WARMTH] = value }
     }
 
+    override suspend fun setHighlightSavedWords(value: Boolean) {
+        dataStore.edit { it[HIGHLIGHT_SAVED] = value }
+    }
+
     private companion object {
         const val DEFAULT_STORE_NAME = "reader_prefs"
         val EPUB_PREFS = stringPreferencesKey("epub_prefs")
         val BRIGHTNESS = floatPreferencesKey("brightness")
         val WARMTH = floatPreferencesKey("warmth")
+        val HIGHLIGHT_SAVED = booleanPreferencesKey("highlight_saved_words")
     }
 }

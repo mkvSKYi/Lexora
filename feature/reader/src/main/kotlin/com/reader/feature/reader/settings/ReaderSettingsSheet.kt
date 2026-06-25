@@ -30,6 +30,7 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -103,6 +104,8 @@ fun ReaderSettingsSheet(
     warmth: Float,
     onBrightnessChange: (Float?) -> Unit,
     onWarmthChange: (Float) -> Unit,
+    highlightEnabled: Boolean,
+    onHighlightChange: (Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -127,6 +130,7 @@ fun ReaderSettingsSheet(
             PageModeRow(prefs = prefs, onPrefsChange = onPrefsChange)
             BrightnessRow(brightness = brightness, onBrightnessChange = onBrightnessChange)
             WarmthRow(warmth = warmth, onWarmthChange = onWarmthChange)
+            HighlightRow(enabled = highlightEnabled, onEnabledChange = onHighlightChange)
         }
     }
 }
@@ -164,6 +168,19 @@ private fun WarmthRow(warmth: Float, onWarmthChange: (Float) -> Unit) {
         onValueChange = { onWarmthChange(it) },
         valueRange = 0f..1f,
     )
+}
+
+/** Toggle for underlining saved (still-learning) words in the current resource. */
+@Composable
+private fun HighlightRow(enabled: Boolean, onEnabledChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        SectionLabel("Highlight saved words")
+        Switch(checked = enabled, onCheckedChange = onEnabledChange)
+    }
 }
 
 @OptIn(ExperimentalReadiumApi::class)

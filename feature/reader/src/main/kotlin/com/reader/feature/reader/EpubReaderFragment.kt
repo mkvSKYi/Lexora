@@ -11,7 +11,12 @@ import androidx.fragment.app.commitNow
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.reader.feature.reader.highlight.HighlightState
+import com.reader.feature.reader.highlight.SavedWordHighlighter
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.StateFlow
@@ -149,6 +154,17 @@ class EpubReaderFragment : Fragment(), EpubNavigatorFragment.Listener {
                 // main-thread only; collecting here (STARTED) satisfies both.
                 session.epubPreferences
                     .onEach { navigator.submitPreferences(it) }
+                    .launchIn(this)
+
+                // Re-highlight the visible resource when the learning set / toggle changes or a new
+                // resource becomes visible. evaluateJavascript runs in the current resource WebView.
+                combine(
+                    session.highlight,
+                    navigator.currentLocator.map { it.href }.distinctUntilChanged(),
+                ) { state, _ -> state }
+                    .onEach { state ->
+                        runCatching { navigator.evaluateJavascript(SavedWordHighlighter.script(state)) }
+                    }
                     .launchIn(this)
             }
         }
@@ -391,6 +407,7 @@ object ReaderNavigatorHost {
         val navigatorFactory: org.readium.r2.navigator.epub.EpubNavigatorFactory,
         val initialLocator: Locator?,
         val epubPreferences: StateFlow<EpubPreferences>,
+        val highlight: StateFlow<HighlightState>,
         val onLocatorChanged: (Locator) -> Unit,
         val onSelection: (SelectionEvent) -> Unit = {},
     ) {
