@@ -1,85 +1,48 @@
-# Reader — a modern Android EPUB reader with tap-to-translate
+# Lexora
 
-A polished, portfolio-grade EPUB reader for Android. Tap any English word to see
-its Ukrainian translation and dictionary entry, save vocabulary as you read, and
-read in a premium, fully themeable interface — all offline.
+**Read English books. Learn the words.**
 
-> Built with a modern Android stack: Kotlin, Jetpack Compose, Material 3, Hilt,
-> Room, Coroutines/Flow, and the [Readium](https://github.com/readium/kotlin-toolkit)
-> EPUB navigator.
+Lexora is an offline Android EPUB reader that turns every page into a vocabulary
+lesson. Tap any word for an instant Ukrainian translation and dictionary entry,
+save what you want to remember, and read in a calm, fully themeable interface.
 
-## Features
+No account, no network, no API keys — translation, the dictionary, and the fonts
+are all bundled.
 
-**Reading**
-- Import and read EPUBs (Readium navigator hosted in Compose).
-- Table of contents, a progress scrubber, and an always-on progress hairline.
-- 9 reading themes (Light, Sepia, Dark, AMOLED, Paper, Nord, Solarized Dark,
-  Gruvbox, Dusk) and 5 bundled premium fonts (Literata, Lora, Atkinson
-  Hyperlegible, Inter, OpenDyslexic), plus font size, line spacing, and margins.
-- A floating "glass" chrome, a **right-edge swipe to adjust brightness**, and a
-  warmth overlay.
+## Highlights
 
-**Translate & learn (the headline feature)**
-- **Tap a word** → an offline EN→UK translation with the dictionary entry (IPA,
-  part of speech, definitions). A bundled 40k-word Wiktionary database is the
-  source; ML Kit on-device translation fills the gaps.
-- **Long-press** → translate the whole sentence.
-- **Save** words to a vocabulary list; mark them **learned** (the card turns
-  green), filter All/Learning/Learned, see your learned-progress stats, and tap a
-  saved word to revisit its definitions.
+- **Tap to translate.** One tap on a word → IPA, part of speech, definitions, and
+  a Ukrainian translation. Long-press to translate a whole sentence.
+- **Build your vocabulary.** Save words, mark them *learned*, filter and track
+  progress, and reopen any word's definitions later.
+- **Read your way.** 9 themes (incl. Nord, Solarized, Gruvbox, Paper), 5 premium
+  fonts (Literata, Lora, Atkinson Hyperlegible, Inter, OpenDyslexic), and a
+  right-edge swipe for brightness.
+- **A library that feels good.** Generated cover art, continue-reading, per-book
+  progress.
 
-**Library**
-- An "Aurora" bookshelf with a Continue-reading hero, generated gradient cover
-  art, per-book progress, and a long-press menu (details / delete).
+➡️ **Using the app:** [`docs/USAGE.md`](docs/USAGE.md)
 
-Everything works **offline** — translation, dictionary, and fonts are all bundled.
+## Built with
 
-## Tech & architecture
+Kotlin · Jetpack Compose · Material 3 · Hilt · Room · Coroutines/Flow ·
+[Readium](https://github.com/readium/kotlin-toolkit) · Google ML Kit (offline
+EN→UK) · a bundled 40k-word Wiktionary dictionary.
 
-- **Language / UI:** Kotlin, Jetpack Compose, Material 3.
-- **DI:** Hilt. **Persistence:** Room (+ DataStore for reading preferences).
-- **Async:** Coroutines / Flow (unidirectional MVVM).
-- **EPUB:** Readium Kotlin Toolkit 3.1.2.
-- **Translation:** Google ML Kit (offline EN→UK) behind a `TranslationEngine`
-  interface; a bundled SQLite Wiktionary dictionary.
+The codebase is multi-module by responsibility (`:core:*`, `:feature:*`).
 
-Multi-module by responsibility:
+## Run it
 
-```
-:app                      navigation + host Activity
-:core:designsystem        theme, typography
-:core:database            Room entities/DAOs + migrations
-:core:data               repositories, importer, preferences
-:core:dictionary          bundled offline dictionary (40k words)
-:feature:library          bookshelf + import
-:feature:reader           Readium navigator, themes/fonts, gestures, brightness
-:feature:translation      translation engine, dictionary/word UI
-:feature:saved            saved-words vocabulary screen
-```
-
-The offline dictionary is built by a dev script in `tools/dictionary/` from a
-kaikki.org Wiktextract extract.
-
-## Build & run
-
-Requirements: Android Studio (JDK 21), Android SDK (compileSdk 36), a device or
-emulator on API 26+.
+Android Studio (JDK 21), Android SDK (compileSdk 36), a device/emulator on API 26+.
 
 ```bash
-./gradlew :app:installDebug      # build + install on a connected device
-./gradlew testDebugUnitTest      # run the unit tests
+./gradlew :app:installDebug      # build + install
+./gradlew testDebugUnitTest      # tests
 ```
 
-There are no API keys or secrets to configure — the app is offline-first.
-
-## Status
-
-A personal side project, built feature-by-feature (brainstorm → spec → plan →
-test-driven implementation → review). Design docs and implementation plans live
-under `docs/superpowers/`.
+Nothing to configure — Lexora is offline-first.
 
 ## Licenses
 
-Bundled reading fonts are SIL Open Font License 1.1 (see
-`feature/reader/src/main/assets/fonts/LICENSES.txt`). Dictionary data derives
-from English Wiktionary via [kaikki.org](https://kaikki.org) (CC BY-SA).
+Bundled fonts are SIL OFL 1.1 (`feature/reader/src/main/assets/fonts/LICENSES.txt`).
+Dictionary data derives from English Wiktionary via [kaikki.org](https://kaikki.org) (CC BY-SA).

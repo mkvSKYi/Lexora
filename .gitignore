@@ -24,3 +24,6 @@ secrets.properties
 
 # Claude personal/machine-specific permissions
 .claude/settings.local.json
+
+# Internal AI design docs (specs/plans/ledgers) — not part of the public repo
+docs/superpowers/
