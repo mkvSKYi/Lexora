@@ -110,6 +110,7 @@ fun ReaderScreen(
     val epubPreferences by viewModel.epubPreferences.collectAsStateWithLifecycle()
     val brightness by viewModel.brightness.collectAsStateWithLifecycle()
     val warmth by viewModel.warmth.collectAsStateWithLifecycle()
+    val highlightEnabled by viewModel.highlightEnabled.collectAsStateWithLifecycle()
 
     // Apply the brightness override to the host window while the reader is shown, restoring
     // the window's previous brightness when we leave (so the system value isn't left stuck).
@@ -149,6 +150,8 @@ fun ReaderScreen(
             warmth = warmth,
             onBrightnessChange = viewModel::setBrightness,
             onWarmthChange = viewModel::setWarmth,
+            highlightEnabled = highlightEnabled,
+            onHighlightChange = viewModel::setHighlightEnabled,
             onDismiss = { settingsVisible = false },
         )
     }
@@ -192,6 +195,7 @@ fun ReaderScreen(
                     bookId = bookId,
                     state = state,
                     epubPreferences = viewModel.epubPreferences,
+                    highlight = viewModel.highlight,
                     navigateRequests = viewModel.navigateRequests,
                     onLocatorChanged = viewModel::onLocatorChanged,
                     onSelection = onSelection,
@@ -288,6 +292,7 @@ private fun EpubReader(
     bookId: Long,
     state: ReaderUiState.Ready,
     epubPreferences: kotlinx.coroutines.flow.StateFlow<org.readium.r2.navigator.epub.EpubPreferences>,
+    highlight: kotlinx.coroutines.flow.StateFlow<com.reader.feature.reader.highlight.HighlightState>,
     navigateRequests: kotlinx.coroutines.flow.SharedFlow<org.readium.r2.shared.publication.Locator>,
     onLocatorChanged: (Long, org.readium.r2.shared.publication.Locator) -> Unit,
     onSelection: (SelectionEvent) -> Unit,
@@ -337,6 +342,7 @@ private fun EpubReader(
                 navigatorFactory = factory,
                 initialLocator = state.initialLocator,
                 epubPreferences = epubPreferences,
+                highlight = highlight,
                 onLocatorChanged = { locator ->
                     // A page turn / new locator invalidates the anchored popover.
                     if (anchorRect != null) {
