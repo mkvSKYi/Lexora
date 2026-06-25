@@ -62,6 +62,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.aspectRatio
 import com.reader.core.designsystem.components.AuroraButton
 import com.reader.core.designsystem.components.DailyGoalRing
 import com.reader.core.designsystem.components.XpBar
@@ -351,28 +352,28 @@ private fun StreakHero(state: DashboardUiState.Content) {
 @Composable
 private fun HeatmapGrid(cells: List<HeatCell>) {
     val weeks = cells.chunked(7) // each chunk is a Mon..Sun week → a calendar row
-    val cellSize = 27.dp
-    val gap = 4.dp
-    Column(verticalArrangement = Arrangement.spacedBy(gap)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+    val gap = 6.dp
+    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(gap)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
             listOf("M", "T", "W", "T", "F", "S", "S").forEach { d ->
                 Text(
                     text = d,
                     color = Color.White.copy(alpha = 0.5f),
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.width(cellSize),
+                    modifier = Modifier.weight(1f),
                 )
             }
         }
         weeks.forEach { week ->
-            Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
                 week.forEach { c ->
                     Box(
                         Modifier
-                            .size(cellSize)
-                            .clip(RoundedCornerShape(9.dp))
+                            .weight(1f)
+                            .aspectRatio(1f)
+                            .clip(RoundedCornerShape(11.dp))
                             .background(heatCellColor(c)),
                     )
                 }
