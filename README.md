@@ -11,6 +11,19 @@ save what you want to remember, and read in a calm, fully themeable interface.
 No account, no network, no API keys — translation, the dictionary, and the fonts
 are all bundled.
 
+## Demo
+
+<p align="center">
+  <img src="docs/media/demo.gif" width="280" alt="Tap a word to get an instant Ukrainian translation and dictionary entry" />
+</p>
+
+<p align="center">
+  <img src="docs/media/today.png" width="200" alt="Today dashboard — streak, heatmap, daily goal" />
+  <img src="docs/media/library.png" width="200" alt="Library" />
+  <img src="docs/media/reader.png" width="200" alt="Reader" />
+  <img src="docs/media/dictionary.png" width="200" alt="Tap-to-translate dictionary sheet" />
+</p>
+
 ## Highlights
 
 - **Tap to translate.** One tap on a word → IPA, part of speech, definitions, and
