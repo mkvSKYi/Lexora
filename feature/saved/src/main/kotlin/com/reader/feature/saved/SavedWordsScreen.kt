@@ -57,16 +57,21 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.reader.core.data.model.SavedWord
+import androidx.compose.foundation.border
 import com.reader.core.designsystem.motion.AnimatedCount
 import com.reader.core.designsystem.motion.AppearOnce
 import com.reader.core.designsystem.motion.Confetti
 import com.reader.core.designsystem.theme.AuroraAccent
+import com.reader.core.designsystem.theme.LexHairline
+import com.reader.core.designsystem.theme.LexTeal
+import com.reader.core.designsystem.theme.Literata
 import com.reader.feature.translation.WordDictionarySheet
 import com.reader.feature.translation.WordLookupViewModel
 import java.text.DateFormat
 import java.util.Date
 
-private val LearnedGreen = Color(0xFF34C759)
+// Warm "learned" accent — a sage-teal that sits in the Ember palette instead of a clashing green.
+private val Learned = LexTeal
 
 @Composable
 fun SavedWordsScreen(
@@ -223,11 +228,13 @@ private fun Header(onBack: () -> Unit) {
 
 @Composable
 private fun ReviewEntryCard(dueCount: Int, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable { onClick() },
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = AuroraAccent.copy(alpha = 0.22f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .background(AuroraAccent.copy(alpha = 0.14f))
+            .border(1.dp, AuroraAccent.copy(alpha = 0.30f), RoundedCornerShape(24.dp))
+            .clickable { onClick() },
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(20.dp),
@@ -258,11 +265,12 @@ private fun ReviewEntryCard(dueCount: Int, onClick: () -> Unit) {
 @Composable
 private fun StatsCard(learnedCount: Int, totalCount: Int) {
     val progress = if (totalCount > 0) learnedCount.toFloat() / totalCount else 0f
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .border(1.dp, LexHairline, RoundedCornerShape(24.dp)),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(20.dp),
@@ -331,17 +339,20 @@ private fun SavedWordCard(
     onToggleLearned: (Boolean) -> Unit,
     onDelete: () -> Unit,
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable { onTap() },
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (word.learned) {
-                LearnedGreen.copy(alpha = 0.18f)
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant
-            },
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+    val learned = word.learned
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(
+                if (learned) Learned.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant,
+            )
+            .border(
+                1.dp,
+                if (learned) Learned.copy(alpha = 0.35f) else LexHairline,
+                RoundedCornerShape(20.dp),
+            )
+            .clickable { onTap() },
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 12.dp, bottom = 12.dp),
@@ -350,7 +361,8 @@ private fun SavedWordCard(
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     text = word.term,
-                    style = MaterialTheme.typography.titleMedium,
+                    fontFamily = Literata,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
@@ -375,7 +387,7 @@ private fun SavedWordCard(
                 Icon(
                     imageVector = if (word.learned) Icons.Filled.CheckCircle else Icons.Outlined.CheckCircle,
                     contentDescription = if (word.learned) "Mark as learning" else "Mark as learned",
-                    tint = if (word.learned) LearnedGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = if (word.learned) Learned else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             IconButton(onClick = onDelete) {
