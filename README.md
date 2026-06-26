@@ -36,7 +36,8 @@ are all bundled.
 - **A library that feels good.** Generated cover art, continue-reading, per-book
   progress.
 
-➡️ **Using the app:** [`docs/USAGE.md`](docs/USAGE.md)
+➡️ **Using the app:** [`docs/USAGE.md`](docs/USAGE.md) ·
+**Architecture:** [`ARCHITECTURE.md`](ARCHITECTURE.md)
 
 ## Built with
 
@@ -44,7 +45,8 @@ Kotlin · Jetpack Compose · Material 3 · Hilt · Room · Coroutines/Flow ·
 [Readium](https://github.com/readium/kotlin-toolkit) · Google ML Kit (offline
 EN→UK) · a bundled 40k-word Wiktionary dictionary.
 
-The codebase is multi-module by responsibility (`:core:*`, `:feature:*`).
+The codebase is multi-module by responsibility (`:core:*`, `:feature:*`) — see
+[`ARCHITECTURE.md`](ARCHITECTURE.md) for the module graph and design decisions.
 
 ## Run it
 
